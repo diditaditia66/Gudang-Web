@@ -1,0 +1,96 @@
+# =====================================================
+# GENERAL
+# =====================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+# Biarkan package-lock.json ikut ke Git
+!package-lock.json
+
+# =====================================================
+# NEXT.JS BUILD
+# =====================================================
+.next/
+out/
+dist/
+.vercel/
+.amplify/
+.aws-sam/
+
+# =====================================================
+# ENVIRONMENT
+# =====================================================
+# Semua file env akan diabaikan kecuali .env.example
+.env
+.env.*
+!.env.example
+
+# =====================================================
+# LOGS & TEMP
+# =====================================================
+logs/
+*.log
+*.pid
+*.seed
+*.pid.lock
+tmp/
+temp/
+.cache/
+.cache-loader/
+
+# =====================================================
+# EDITOR / SYSTEM
+# =====================================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# =====================================================
+# FRONTEND ASSETS
+# =====================================================
+*.local
+*.swp
+*.swo
+*.orig
+
+# =====================================================
+# BACKEND (Node/Express)
+# =====================================================
+backend/node_modules/
+backend/.env
+backend/.pm2/
+backend/logs/
+backend/dist/
+
+# =====================================================
+# BUILD ARTIFACTS (for AWS Amplify, Docker, etc.)
+# =====================================================
+amplify/#current-cloud-backend
+amplify/.config/local-*
+amplify/backend/awscloudformation/
+amplify/team-provider-info.json
+docker-compose.override.yml
+docker-data/
+docker-logs/
+
+# =====================================================
+# OS / DEPLOYMENT
+# =====================================================
+*.bak
+*.tmp
+*.old
+*.swp
+*.swo
+*.zip
+*.tar.gz
+*.tgz
+
+# =====================================================
+# MISC
+# =====================================================
+coverage/
+cypress/screenshots/
+cypress/videos/

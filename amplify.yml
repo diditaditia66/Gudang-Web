@@ -1,0 +1,48 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "PWD: $(pwd)  |  Node $(node -v)  npm $(npm -v)"
+        # Wajib ada lockfile (untuk npm ci)
+        - test -f package-lock.json || (echo "ERROR: package-lock.json missing" && exit 1)
+
+        # Bersihkan cache lama supaya tidak bawa-bawa hasil sebelumnya
+        - rm -rf node_modules .next .next/cache
+
+        # Install deps + devDeps (Tailwind, PostCSS, Autoprefixer, ESLint, TypeScript, dll)
+        - npm ci --include=dev
+
+        # Sanity checks: tailwind harus terpasang
+        - npm ls tailwindcss || true
+        - npx tailwindcss -v || (echo "Tailwind not found after npm ci" && exit 1)
+        - node -e "require('tailwindcss'); console.log('tailwind ok')"
+
+        # Verifikasi konfigurasi alias @ di tsconfig.json (harus @/* -> src/*)
+        - test -f tsconfig.json || (echo 'ERROR: tsconfig.json tidak ditemukan di root' && exit 1)
+        - node -e "const f=require('./tsconfig.json'); const ok=f?.compilerOptions?.paths?.['@/*']; if(!ok){console.error('ERROR: Alias @ belum dikonfigurasi di tsconfig.json'); process.exit(1)} console.log('Alias @ OK ->', ok)"
+
+    build:
+      commands:
+        - export NEXT_TELEMETRY_DISABLED=1
+        - export NODE_OPTIONS="--max_old_space_size=4096"
+
+        # ENV wajib: NEXT_PUBLIC_API_BASE_URL
+        - test -n \"$NEXT_PUBLIC_API_BASE_URL\" || (echo 'ERROR: NEXT_PUBLIC_API_BASE_URL belum di-set di Amplify Environment variables' && exit 1)
+
+        # Inject ENV ke Next saat build
+        - printf "NEXT_PUBLIC_API_BASE_URL=%s\n" "$NEXT_PUBLIC_API_BASE_URL" > .env.production
+        - echo ".env.production:" && cat .env.production
+
+        # Build Next.js (SSR)
+        - npm run build
+
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*
