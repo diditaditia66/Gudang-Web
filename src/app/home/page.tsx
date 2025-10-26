@@ -9,7 +9,7 @@ export default function HomePage() {
   useEffect(() => setUsername(getUsername()), []);
 
   return (
-    <div className="min-h-[calc(100vh-56px)] flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-[calc(100vh-56px)] flex flex-col items-center justify-center bg-gray-50">
       <div className="container text-center px-4">
         <h1 className="text-4xl md:text-5xl font-bold mb-3 text-gray-900">
           Selamat datang di <span className="text-indigo-600">Gudang</span>
@@ -20,8 +20,8 @@ export default function HomePage() {
 
         <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-10">
           <Link href="/barang/new" className="group">
-            <div className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow-sm hover:shadow-md border transition-all duration-200">
-              <div className="p-3 bg-gradient-to-r from-indigo-400 to-purple-500 text-white rounded-full shadow">
+            <div className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow hover:shadow-md border transition">
+              <div className="p-3 bg-indigo-500 text-white rounded-full">
                 <Plus size={28} />
               </div>
               <div className="text-left">
@@ -36,8 +36,8 @@ export default function HomePage() {
           </Link>
 
           <Link href="/ambil" className="group">
-            <div className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow-sm hover:shadow-md border transition-all duration-200">
-              <div className="p-3 bg-gradient-to-r from-amber-500 to-orange-400 text-white rounded-full shadow">
+            <div className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow hover:shadow-md border transition">
+              <div className="p-3 bg-amber-500 text-white rounded-full">
                 <PackageOpen size={28} />
               </div>
               <div className="text-left">
@@ -52,8 +52,8 @@ export default function HomePage() {
           </Link>
 
           <Link href="/list" className="group">
-            <div className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow-sm hover:shadow-md border transition-all duration-200">
-              <div className="p-3 bg-gradient-to-r from-orange-400 to-pink-500 text-white rounded-full shadow">
+            <div className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow hover:shadow-md border transition">
+              <div className="p-3 bg-pink-500 text-white rounded-full">
                 <FileText size={28} />
               </div>
               <div className="text-left">
@@ -66,15 +66,6 @@ export default function HomePage() {
               </div>
             </div>
           </Link>
-        </div>
-
-        <div className="max-w-3xl mx-auto bg-white/60 backdrop-blur-sm border rounded-2xl p-6 shadow-sm text-left">
-          <h4 className="font-semibold mb-2 text-gray-800">Tips</h4>
-          <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
-            <li>Gunakan kolom pencarian di halaman “List Barang” untuk menemukan item lebih cepat.</li>
-            <li>Semua aksi (tambah/ambil/hapus) otomatis tercatat di “History”.</li>
-            <li>Login aman menggunakan cookie HttpOnly & validasi JWT di server.</li>
-          </ul>
         </div>
 
         {username && (

@@ -30,7 +30,7 @@ export default async function RootLayout({
     <html lang="id">
       <body className="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
         {/* Header */}
-        <header className="flex justify-between items-center px-8 py-4 bg-white shadow-sm border-b">
+        <header className="flex justify-between items-center px-8 py-4 bg-white border-b shadow-sm">
           <div className="text-xl font-bold text-gray-800">
             {username ? `👋 ${username}` : "Gudang"}
           </div>
