@@ -1,7 +1,7 @@
 // src/app/login/page.tsx
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginInner() {
@@ -13,6 +13,11 @@ function LoginInner() {
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Jika sudah login (ada cookie token) langsung redirect
+  useEffect(() => {
+    if (document.cookie.includes("token=")) router.replace(next);
+  }, [router, next]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,8 +43,11 @@ function LoginInner() {
   }
 
   return (
-    <div className="min-h-[70vh] grid place-items-center">
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-3 border p-6 rounded-xl bg-white">
+    <div className="min-h-[70vh] grid place-items-center bg-gray-50">
+      <form
+        onSubmit={onSubmit}
+        className="w-full max-w-sm space-y-3 border p-6 rounded-xl bg-white shadow-md"
+      >
         <h1 className="text-xl font-semibold">Login</h1>
         <input
           className="w-full rounded-lg border px-3 py-2"
@@ -69,13 +77,16 @@ function LoginInner() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-[70vh] grid place-items-center">Memuat...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-[70vh] grid place-items-center">Memuat...</div>
+      }
+    >
       <LoginInner />
     </Suspense>
   );
 }
 
-// Jika ingin menghindari pre-render sepenuhnya untuk halaman ini,
-// bisa tambahkan salah satu di bawah (opsional):
+// Jika ingin hindari pre-render penuh (opsional):
 // export const dynamic = "force-dynamic";
 // export const revalidate = 0;

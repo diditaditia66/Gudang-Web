@@ -1,7 +1,5 @@
 "use client";
-
 import { useEffect, useState } from "react";
-import Link from "next/link";
 
 type History = {
   id: number;
@@ -22,9 +20,7 @@ export default function HistoryPage() {
     setLoading(true);
     setErr(null);
     try {
-      const r = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get_history`, {
-        cache: "no-store",
-      });
+      const r = await fetch("/api/backend/get_history", { cache: "no-store" });
       if (!r.ok) throw new Error(`Backend ${r.status}`);
       const json: History[] = await r.json();
       setData(json);
@@ -35,56 +31,42 @@ export default function HistoryPage() {
     }
   }
 
-  useEffect(() => {
-    void load();
-  }, []);
+  async function hapusSemua() {
+    await fetch("/api/backend/delete_history", { method: "DELETE" });
+    await load();
+  }
+
+  useEffect(() => { load(); }, []);
 
   return (
     <div className="grid gap-4">
       <h1 className="text-2xl md:text-3xl font-bold">History</h1>
 
       <div className="flex items-center gap-3 text-sm">
-        <button className="btn" onClick={load} disabled={loading}>
-          {loading ? "Memuat..." : "Refresh"}
-        </button>
-        <Link className="link" href="/barang/new">
-          Tambah Barang
-        </Link>
+        <button className="btn" onClick={load} disabled={loading}>{loading ? "Memuat..." : "Refresh"}</button>
+        <button className="btn btn-primary" onClick={hapusSemua}>Hapus Semua</button>
       </div>
 
       {err && <div className="text-red-600 text-sm">Error: {err}</div>}
 
       <div className="overflow-auto rounded-xl border">
         <table className="table">
-          <thead>
-            <tr>
-              <th className="th">Waktu</th>
-              <th className="th">Nama</th>
-              <th className="th">Jumlah</th>
-              <th className="th">Lokasi</th>
-              <th className="th">Aksi</th>
-              <th className="th">User</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th>Waktu</th><th>Nama</th><th>Jumlah</th><th>Lokasi</th><th>Aksi</th><th>User</th>
+          </tr></thead>
           <tbody>
-            {data.map((h) => (
+            {data.map(h => (
               <tr key={h.id}>
-                <td className="td">{new Date(h.waktu).toLocaleString()}</td>
-                <td className="td">{h.nama_barang}</td>
-                <td className="td">{h.jumlah}</td>
-                <td className="td">
-                  <span className="tag">{h.lokasi}</span>
-                </td>
-                <td className="td">{h.aksi}</td>
-                <td className="td">{h.username}</td>
+                <td>{new Date(h.waktu).toLocaleString()}</td>
+                <td>{h.nama_barang}</td>
+                <td>{h.jumlah}</td>
+                <td><span className="tag">{h.lokasi}</span></td>
+                <td>{h.aksi}</td>
+                <td>{h.username}</td>
               </tr>
             ))}
             {!loading && data.length === 0 && (
-              <tr>
-                <td className="td" colSpan={6}>
-                  Belum ada data.
-                </td>
-              </tr>
+              <tr><td colSpan={6}>Belum ada data.</td></tr>
             )}
           </tbody>
         </table>
