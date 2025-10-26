@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import { signIn, getCurrentUser } from "aws-amplify/auth";
 
 function EyeIcon({ on }: { on: boolean }) {
   return (
@@ -27,14 +28,18 @@ function LoginInner() {
   const router = useRouter();
   const sp = useSearchParams();
   const next = useMemo(() => sp.get("next") || "/home", [sp]);
-  const [username, setUsername] = useState("");
+
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Jika sudah login, langsung arahkan ke /home
   useEffect(() => {
-    if (document.cookie.includes("token=")) router.replace("/home");
+    getCurrentUser()
+      .then(() => router.replace("/home"))
+      .catch(() => {}); // belum login -> biarkan di halaman ini
   }, [router]);
 
   async function onSubmit(e: React.FormEvent) {
@@ -42,19 +47,22 @@ function LoginInner() {
     setLoading(true);
     setMsg("");
     try {
-      const r = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await r.json();
-      if (!r.ok) {
-        setMsg(data?.message || "Login gagal");
+      // username = email pada konfigurasi kita
+      await signIn({ username: email, password });
+      router.replace(next);
+    } catch (err: any) {
+      // Tangani error populer dari Cognito
+      if (err?.name === "UserNotConfirmedException") {
+        setMsg(
+          "Akun belum terverifikasi. Cek email Anda untuk kode verifikasi, lalu buka /verify."
+        );
+      } else if (err?.name === "NotAuthorizedException") {
+        setMsg("Email atau password salah.");
+      } else if (err?.name === "UserNotFoundException") {
+        setMsg("Akun tidak ditemukan. Silakan daftar terlebih dahulu.");
       } else {
-        router.replace(next);
+        setMsg(err?.message || "Login gagal");
       }
-    } catch {
-      setMsg("Kesalahan jaringan / server");
     } finally {
       setLoading(false);
     }
@@ -72,16 +80,21 @@ function LoginInner() {
         </p>
 
         <Input
-          label="Username"
-          placeholder="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          id="username"
+          label="Email"
+          type="email"
+          placeholder="nama@contoh.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          id="email"
           autoComplete="username"
+          required
         />
 
         <div>
-          <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="password"
+            className="mb-1 block text-sm font-medium text-gray-700"
+          >
             Password
           </label>
           <div className="relative">
@@ -93,6 +106,7 @@ function LoginInner() {
               onChange={(e) => setPassword(e.target.value)}
               className="pr-10"
               autoComplete="current-password"
+              required
             />
             <button
               type="button"
@@ -110,10 +124,16 @@ function LoginInner() {
           className="w-full"
           variant="primary"
           loading={loading}
-          disabled={!username || !password}
+          disabled={!email || !password}
         >
           Masuk
         </Button>
+
+        {/* Link bantuan sederhana (buat nanti kalau sudah ada halamannya) */}
+        <div className="flex justify-between text-xs text-gray-600">
+          <a className="hover:underline" href="/register">Belum punya akun? Daftar</a>
+          <a className="hover:underline" href="/forgot">Lupa password?</a>
+        </div>
 
         {msg && <p className="text-sm text-red-600 text-center">{msg}</p>}
       </form>

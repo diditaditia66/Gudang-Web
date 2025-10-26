@@ -16,9 +16,12 @@ function pickBackendBase() {
 async function withRetry<T>(fn: () => Promise<T>, times = 2, delayMs = 400): Promise<T> {
   let lastErr: unknown;
   for (let i = 0; i <= times; i++) {
-    try { return await fn(); } catch (err) {
-      lastErr = err; if (i === times) break;
-      await new Promise(r => setTimeout(r, delayMs * (i + 1)));
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (i === times) break;
+      await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
     }
   }
   throw lastErr;
@@ -32,35 +35,46 @@ async function handle(req: NextRequest, { params }: { params: { path: string[] }
   const qs = url.search || "";
   const dest = `${base.replace(/\/+$/, "")}/${path}${qs}`;
 
-  const token = req.cookies.get("token")?.value;
+  // ✅ SALIN semua header masuk (termasuk Authorization) ke header keluar
+  const headers = new Headers();
+  req.headers.forEach((value, key) => {
+    const k = key.toLowerCase();
+    // buang header yang bermasalah untuk proxy
+    if (k === "host" || k === "content-length" || k === "connection") return;
+    headers.set(key, value);
+  });
 
-  const headers: Record<string, string> = {
-    "Content-Type": req.headers.get("content-type") ?? "application/json",
-    "Accept": req.headers.get("accept") ?? "application/json, */*;q=0.1",
-    "User-Agent": "Next.js Server (Amplify)",
-    "X-Forwarded-Proto": "https",
-  };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  // pastikan Content-Type ada untuk request ber-body
+  if (!headers.has("content-type") && req.method !== "GET" && req.method !== "HEAD") {
+    headers.set("content-type", "application/json");
+  }
+  // tambahkan header info proxy jika mau
+  headers.set("X-Forwarded-Proto", "https");
+  headers.set("User-Agent", "Next.js Server (Proxy)");
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 7000);
-  const init: RequestInit = { method: req.method, headers, signal: controller.signal, cache: "no-store" };
-  if (req.method !== "GET" && req.method !== "HEAD") init.body = await req.text();
+
+  const init: RequestInit = {
+    method: req.method,
+    headers,
+    signal: controller.signal,
+    cache: "no-store",
+    body: req.method !== "GET" && req.method !== "HEAD" ? await req.text() : undefined,
+  };
 
   try {
     const r = await withRetry(() => fetch(dest, init));
     clearTimeout(timeout);
 
-    const text = await r.text();
-    try {
-      const json = text ? JSON.parse(text) : null;
-      return NextResponse.json(json, { status: r.status });
-    } catch {
-      return new NextResponse(text, {
-        status: r.status,
-        headers: { "Content-Type": r.headers.get("content-type") ?? "text/plain" },
-      });
-    }
+    // Teruskan response dari backend apa adanya (content-type, dll.)
+    const bodyBuf = await r.arrayBuffer();
+    const out = new NextResponse(bodyBuf, { status: r.status });
+    r.headers.forEach((v, k) => {
+      // optional: filter header tertentu jika perlu
+      out.headers.set(k, v);
+    });
+    return out;
   } catch (err: any) {
     const msg = typeof err?.message === "string" ? err.message : String(err);
     return NextResponse.json({ error: "Proxy failed", detail: msg }, { status: 500 });

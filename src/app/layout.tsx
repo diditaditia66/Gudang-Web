@@ -2,9 +2,10 @@
 
 import "./globals.css";
 import { useEffect, useState } from "react";
-import jwt from "jsonwebtoken";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { getCurrentUser, signOut } from "aws-amplify/auth";
+import "@/amplify";
 
 export default function RootLayout({
   children,
@@ -14,30 +15,36 @@ export default function RootLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [username, setUsername] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // ✅ Ambil user login dari Cognito
   useEffect(() => {
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("token="))
-      ?.split("=")[1];
-    if (token) {
+    async function loadUser() {
       try {
-        const decoded = jwt.decode(token) as { username?: string };
-        setUsername(decoded?.username || null);
+        const user = await getCurrentUser();
+        setUsername(user?.signInDetails?.loginId || user?.username || "User");
       } catch {
         setUsername(null);
+      } finally {
+        setLoading(false);
       }
     }
+    loadUser();
   }, []);
 
+  // ✅ Logout langsung dari Cognito
   async function handleLogout() {
-    await fetch("/api/logout", { method: "POST" });
-    router.replace("/login");
+    try {
+      await signOut();
+      router.replace("/login");
+    } catch (e) {
+      console.error("Gagal logout:", e);
+    }
   }
 
   const navItems = [
     { label: "Home", href: "/home" },
-    { label: "Tambah", href: "/tambah" },
+    { label: "Tambah", href: "/barang/new" },
     { label: "Ambil", href: "/ambil" },
     { label: "List", href: "/list" },
     { label: "History", href: "/history" },
@@ -52,7 +59,7 @@ export default function RootLayout({
             <Link href="/" className="text-2xl font-semibold text-gray-800">
               🏷️ Gudang
             </Link>
-            {username && (
+            {!loading && username && (
               <span className="text-sm text-gray-600 ml-2 md:hidden">
                 Halo, <b>{username}</b>
               </span>
@@ -60,7 +67,7 @@ export default function RootLayout({
           </div>
 
           {/* NAVBAR */}
-          {username && (
+          {!loading && username && (
             <nav className="flex gap-3 flex-wrap justify-center md:justify-start">
               {navItems.map((item) => (
                 <Link
@@ -80,7 +87,7 @@ export default function RootLayout({
 
           {/* USER ACTION */}
           <div className="mt-2 md:mt-0">
-            {username ? (
+            {loading ? null : username ? (
               <div className="flex items-center gap-3">
                 <span className="hidden md:inline text-sm text-gray-600">
                   Halo, <b>{username}</b>
