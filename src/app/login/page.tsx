@@ -2,10 +2,12 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Input from "@/components/ui/Input";
+import Button from "@/components/ui/Button";
 
 function EyeIcon({ on }: { on: boolean }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24">
+    <svg width="18" height="18" viewBox="0 0 24 24" className="opacity-70">
       {on ? (
         <path
           fill="currentColor"
@@ -49,7 +51,7 @@ function LoginInner() {
       if (!r.ok) {
         setMsg(data?.message || "Login gagal");
       } else {
-        router.replace("/home"); // ✅ langsung arahkan ke home
+        router.replace(next);
       }
     } catch {
       setMsg("Kesalahan jaringan / server");
@@ -62,43 +64,56 @@ function LoginInner() {
     <div className="min-h-[calc(100vh-56px)] flex items-center justify-center bg-gray-50">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-2xl border bg-white shadow-lg p-6 space-y-4"
+        className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white shadow-lg p-6 space-y-4"
       >
-        <h2 className="text-2xl font-semibold text-center">Login Gudang</h2>
-        <p className="text-sm text-gray-500 text-center mb-2">
+        <h1 className="text-2xl font-semibold text-center">Login Gudang</h1>
+        <p className="text-sm text-gray-500 text-center">
           Masukkan kredensial untuk melanjutkan
         </p>
 
-        <input
-          className="w-full rounded-xl border px-3 py-2"
-          placeholder="Username"
+        <Input
+          label="Username"
+          placeholder="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
+          id="username"
+          autoComplete="username"
         />
 
-        <div className="relative">
-          <input
-            className="w-full rounded-xl border px-3 py-2 pr-10"
-            placeholder="Password"
-            type={show ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button
-            type="button"
-            onClick={() => setShow((s) => !s)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
-          >
-            <EyeIcon on={show} />
-          </button>
+        <div>
+          <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
+            Password
+          </label>
+          <div className="relative">
+            <Input
+              id="password"
+              type={show ? "text" : "password"}
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pr-10"
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShow((s) => !s)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              aria-label={show ? "Sembunyikan password" : "Tampilkan password"}
+            >
+              <EyeIcon on={show} />
+            </button>
+          </div>
         </div>
 
-        <button
-          className="w-full rounded-xl bg-gray-900 text-white py-2 font-medium hover:bg-black transition disabled:opacity-50"
-          disabled={loading || !username || !password}
+        <Button
+          type="submit"
+          className="w-full"
+          variant="primary"
+          loading={loading}
+          disabled={!username || !password}
         >
-          {loading ? "Memproses..." : "Masuk"}
-        </button>
+          Masuk
+        </Button>
 
         {msg && <p className="text-sm text-red-600 text-center">{msg}</p>}
       </form>

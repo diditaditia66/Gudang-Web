@@ -15,7 +15,7 @@ export default function HomePage() {
           Selamat datang di <span className="text-indigo-600">Gudang</span>
         </h1>
         <p className="text-gray-600 mb-8">
-          Kelola stok & riwayat barang Anda dengan mudah dan cepat.
+          Kelola stok &amp; riwayat barang Anda dengan mudah dan cepat.
         </p>
 
         <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-10">

@@ -2,9 +2,21 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getUsername } from "@/lib/user-client";
+import Button from "@/components/ui/Button";
+import Autocomplete from "@/components/ui/Autocomplete";
+import Input from "@/components/ui/Input";
+import { Card, CardBody } from "@/components/ui/Card";
 
 type Barang = { nama_barang: string; jumlah: number; lokasi: string };
-type History = { id: number; nama_barang: string; jumlah: number; lokasi: string | null; aksi: string; username: string | null; waktu: string };
+type History = {
+  id: number;
+  nama_barang: string;
+  jumlah: number;
+  lokasi: string | null;
+  aksi: string;
+  username: string | null;
+  waktu: string;
+};
 
 export default function AmbilPage() {
   const [username, setUsername] = useState<string>("");
@@ -18,10 +30,6 @@ export default function AmbilPage() {
   const [msgOk, setMsgOk] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [confirmAll, setConfirmAll] = useState(false);
-
-  // kontrol suggestion
-  const [openSuggest, setOpenSuggest] = useState(false);
-  const suggestRef = useRef<HTMLUListElement | null>(null);
 
   useEffect(() => {
     const u = getUsername();
@@ -46,26 +54,17 @@ export default function AmbilPage() {
     }
   }
 
-  // suggest nama unik
   const suggestNama = useMemo(() => {
     const q = nama.toLowerCase().trim();
+    const uniq = (arr: string[]) => Array.from(new Set(arr));
     if (!q) return [];
-    return all
-      .map((b) => b.nama_barang)
-      .filter((v, i, arr) => arr.indexOf(v) === i)
-      .filter((v) => v.toLowerCase().includes(q))
-      .slice(0, 8);
+    return uniq(all.map((b) => b.nama_barang)).filter((v) => v.toLowerCase().includes(q)).slice(0, 8);
   }, [all, nama]);
 
-  // lokasi sesuai nama
   const lokasiList = useMemo(() => {
-    return all
-      .filter((b) => b.nama_barang === nama)
-      .map((b) => b.lokasi)
-      .filter((v, i, arr) => arr.indexOf(v) === i);
+    return Array.from(new Set(all.filter((b) => b.nama_barang === nama).map((b) => b.lokasi)));
   }, [all, nama]);
 
-  // stok total untuk nama
   const stokSaatIni = useMemo(() => {
     if (!nama) return undefined;
     const total = all
@@ -96,7 +95,9 @@ export default function AmbilPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || "Gagal ambil barang");
       setMsgOk("✅ Berhasil mencatat pengambilan.");
-      setNama(""); setJumlah(""); setLokasi("");
+      setNama("");
+      setJumlah("");
+      setLokasi("");
       await reloadAll();
     } catch (err: any) {
       setMsgError(err.message);
@@ -105,11 +106,10 @@ export default function AmbilPage() {
     }
   }
 
-  // hanya riwayat Ambil
   const ambilOnlyHistory = useMemo(
     () =>
       history
-        .filter((h) => /ambil/i.test(h.aksi || "")) // "Ambil", "Ambil Barang", dst
+        .filter((h) => /ambil/i.test(h.aksi || ""))
         .sort((a, b) => +new Date(b.waktu) - +new Date(a.waktu)),
     [history]
   );
@@ -124,21 +124,14 @@ export default function AmbilPage() {
             User: <b>{username || "-"}</b>
           </p>
         </div>
-        <button onClick={reloadAll} className="btn-ghost" disabled={loading}>
-          {loading ? (
-            <>
-              <span className="h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-              Memuat…
-            </>
-          ) : (
-            <>↻ Refresh</>
-          )}
-        </button>
+        <Button onClick={reloadAll} variant="ghost" disabled={loading} loading={loading}>
+          Refresh
+        </Button>
       </div>
 
       {/* FORM */}
-      <div className="card">
-        <div className="card-body space-y-4">
+      <Card>
+        <CardBody className="space-y-4">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -146,46 +139,20 @@ export default function AmbilPage() {
             }}
             className="grid gap-4 md:grid-cols-4"
           >
-            {/* NAMA + SUGGEST */}
-            <div className="relative">
-              <input
-                className="input"
-                placeholder="Nama Barang"
+            {/* NAMA + AUTOCOMPLETE */}
+            <div className="md:col-span-2">
+              <label className="mb-1 block text-sm font-medium text-gray-700">Nama Barang</label>
+              <Autocomplete
                 value={nama}
-                onChange={(e) => {
-                  setNama(e.target.value);
-                  setOpenSuggest(true);
+                onChange={setNama}
+                suggestions={suggestNama}
+                onPick={(v) => {
+                  setNama(v);
+                  const found = all.find((b) => b.nama_barang === v);
+                  if (found) setLokasi(found.lokasi);
                 }}
-                onFocus={() => setOpenSuggest(true)}
-                onBlur={() => setTimeout(() => setOpenSuggest(false), 120)}
-                aria-autocomplete="list"
-                aria-expanded={openSuggest && suggestNama.length > 0}
+                placeholder="Ketik nama barang…"
               />
-              {openSuggest && suggestNama.length > 0 && (
-                <ul
-                  ref={suggestRef}
-                  className="absolute z-10 mt-1 w-full bg-white border rounded-lg shadow max-h-48 overflow-auto"
-                  role="listbox"
-                >
-                  {suggestNama.map((s) => (
-                    <li key={s} role="option">
-                      <button
-                        type="button"
-                        className="w-full text-left px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm"
-                        // penting: pakai onMouseDown supaya tidak kalah oleh blur input
-                        onMouseDown={() => {
-                          setNama(s);
-                          const found = all.find((b) => b.nama_barang === s);
-                          if (found) setLokasi(found.lokasi);
-                          setOpenSuggest(false);
-                        }}
-                      >
-                        {s}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
               {!!stokSaatIni && (
                 <div className="mt-1 text-xs text-gray-500">
                   Stok total: <b>{stokSaatIni}</b>
@@ -194,43 +161,41 @@ export default function AmbilPage() {
             </div>
 
             {/* JUMLAH */}
-            <input
-              className="input"
+            <Input
+              label="Jumlah"
               type="number"
               min={1}
-              placeholder="Jumlah"
+              placeholder="0"
               value={jumlah}
-              onChange={(e) =>
-                setJumlah(e.target.value === "" ? "" : Number(e.target.value))
-              }
+              onChange={(e) => setJumlah(e.target.value === "" ? "" : Number(e.target.value))}
             />
 
             {/* LOKASI */}
-            {lokasiList.length ? (
-              <select
-                className="input"
-                value={lokasi}
-                onChange={(e) => setLokasi(e.target.value)}
-              >
-                <option value="">Pilih lokasi</option>
-                {lokasiList.map((l) => (
-                  <option key={l} value={l}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                className="input"
-                placeholder="Lokasi"
-                value={lokasi}
-                onChange={(e) => setLokasi(e.target.value)}
-              />
-            )}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Lokasi</label>
+              {lokasiList.length ? (
+                <select
+                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  value={lokasi}
+                  onChange={(e) => setLokasi(e.target.value)}
+                >
+                  <option value="">Pilih lokasi</option>
+                  {lokasiList.map((l) => (
+                    <option key={l} value={l}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Input placeholder="Lokasi" value={lokasi} onChange={(e) => setLokasi(e.target.value)} />
+              )}
+            </div>
 
-            <button type="submit" className="btn-primary w-full rounded-lg" disabled={busy || !canSubmit}>
-              {busy ? "Memproses..." : "Catat Pengambilan"}
-            </button>
+            <div className="md:col-span-4">
+              <Button type="submit" className="w-full md:w-auto" variant="primary" disabled={busy || !canSubmit} loading={busy}>
+                Catat Pengambilan
+              </Button>
+            </div>
           </form>
 
           {msgError && (
@@ -243,22 +208,23 @@ export default function AmbilPage() {
               {msgOk}
             </div>
           )}
-        </div>
-      </div>
+        </CardBody>
+      </Card>
 
       {/* HEADER RIWAYAT */}
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Riwayat Pengambilan</h2>
-        <button
-          className="btn-danger rounded-lg"
+        <Button
+          variant="danger"
+          className="rounded-lg"
           onClick={() => setConfirmAll(true)}
           disabled={ambilOnlyHistory.length === 0}
         >
           Hapus Semua
-        </button>
+        </Button>
       </div>
 
-      {/* TABEL RIWAYAT (permukaan berbeda) */}
+      {/* TABEL RIWAYAT */}
       <div className="surface-muted rounded-2xl p-3 border border-slate-200">
         <div className="overflow-auto rounded-xl border bg-white shadow-sm">
           <table className="table">
@@ -308,23 +274,23 @@ export default function AmbilPage() {
             <h3 className="text-lg font-semibold mb-3">Konfirmasi</h3>
             <p>Hapus <b>semua</b> riwayat <b>pengambilan</b>?</p>
             <div className="mt-4 flex justify-end gap-3">
-              <button className="btn" onClick={() => setConfirmAll(false)}>
+              <Button variant="ghost" onClick={() => setConfirmAll(false)}>
                 Batal
-              </button>
-              <button
-                className="btn-danger"
+              </Button>
+              <Button
+                variant="danger"
                 onClick={async () => {
                   await fetch("/api/backend/delete_history", {
                     method: "DELETE",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({}), // aman untuk backend yang mengharapkan JSON
+                    body: JSON.stringify({}),
                   });
                   setConfirmAll(false);
                   await reloadAll();
                 }}
               >
                 Hapus
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -1,4 +1,3 @@
-// src/app/list/page.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -22,10 +21,8 @@ export default function ListPage() {
   const [sortKey, setSortKey] = useState<SortKey>("nama_barang");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  // pagination
   const [page, setPage] = useState(1);
   const perPage = 10;
-
   const debounceRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -122,6 +119,9 @@ export default function ListPage() {
           className={`inline-flex items-center gap-1 hover:underline ${
             active ? "text-gray-900 font-semibold" : "text-gray-600"
           }`}
+          aria-sort={
+            active ? (sortDir === "asc" ? "ascending" : "descending") : "none"
+          }
         >
           {label}
           {active && <span className="text-xs">{sortDir === "asc" ? "▲" : "▼"}</span>}
@@ -131,21 +131,19 @@ export default function ListPage() {
   }
 
   function toCsvValue(v: unknown) {
-    // escape CSV: quote bila ada koma/kutip/linebreak
     const s = String(v ?? "");
     if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
     return s;
   }
 
   function exportCsv() {
-    // ekspor seluruh dataset yang sedang DIFILTER & DIURUTKAN
     const data = sorted;
     const header = ["nama_barang", "jumlah", "lokasi"];
     const lines = [
-      header.join(","), // header
+      header.join(","),
       ...data.map((r) => [toCsvValue(r.nama_barang), toCsvValue(r.jumlah), toCsvValue(r.lokasi)].join(",")),
     ];
-    const csv = "\uFEFF" + lines.join("\n"); // BOM agar Excel nyaman
+    const csv = "\uFEFF" + lines.join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const ts = new Date();
@@ -172,15 +170,8 @@ export default function ListPage() {
           <Button onClick={exportCsv} variant="secondary" disabled={loading || sorted.length === 0}>
             Export CSV
           </Button>
-          <Button onClick={() => load()} disabled={loading} variant="secondary">
-            {loading ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="animate-spin h-4 w-4 border-2 border-gray-500 border-t-transparent rounded-full"></span>
-                Memuat
-              </span>
-            ) : (
-              "Refresh"
-            )}
+          <Button onClick={() => load()} disabled={loading} variant="secondary" loading={loading}>
+            Refresh
           </Button>
         </div>
       </div>
@@ -193,6 +184,7 @@ export default function ListPage() {
               placeholder="Cari berdasarkan nama atau lokasi"
               value={q}
               onChange={(e) => onSearchChange(e.target.value)}
+              aria-label="Pencarian barang"
             />
           </div>
           {msg && (
@@ -202,6 +194,7 @@ export default function ListPage() {
                   ? "bg-green-50 border-green-200 text-green-700"
                   : "bg-red-50 border-red-200 text-red-700"
               }`}
+              role="status"
             >
               {msg}
             </div>
@@ -267,29 +260,28 @@ export default function ListPage() {
               <div>
                 Menampilkan{" "}
                 <b>
-                  {Math.min((page - 1) * perPage + 1, sorted.length)}–
-                  {Math.min(page * perPage, sorted.length)}
+                  {Math.min((page - 1) * perPage + 1, sorted.length)}–{Math.min(page * perPage, sorted.length)}
                 </b>{" "}
                 dari <b>{sorted.length}</b> barang
               </div>
 
               <div className="flex gap-2">
-                <button
-                  className="btn"
+                <Button
+                  variant="ghost"
                   disabled={page === 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   aria-label="Halaman sebelumnya"
                 >
                   ← Sebelumnya
-                </button>
-                <button
-                  className="btn"
+                </Button>
+                <Button
+                  variant="ghost"
                   disabled={page === totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   aria-label="Halaman berikutnya"
                 >
                   Berikutnya →
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -297,21 +289,24 @@ export default function ListPage() {
       </Card>
 
       {/* Modal Konfirmasi */}
-      <Modal open={confirm.open} onClose={() => setConfirm({ open: false })} title="Konfirmasi Hapus">
+      <Modal
+        open={confirm.open}
+        onClose={() => setConfirm({ open: false })}
+        title="Konfirmasi Hapus"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirm({ open: false })}>
+              Batal
+            </Button>
+            <Button variant="danger" onClick={() => remove(confirm.nama!, confirm.lokasi!)}>
+              Hapus
+            </Button>
+          </>
+        }
+      >
         <p className="text-gray-700">
           Apakah Anda yakin ingin menghapus barang <b>{confirm.nama}</b> di lokasi <b>{confirm.lokasi}</b>?
         </p>
-        <div className="mt-5 flex justify-end gap-2">
-          <button className="btn bg-gray-100 hover:bg-gray-200" onClick={() => setConfirm({ open: false })}>
-            Batal
-          </button>
-          <button
-            className="btn btn-primary bg-red-500 hover:bg-red-600 text-white"
-            onClick={() => remove(confirm.nama!, confirm.lokasi!)}
-          >
-            Hapus
-          </button>
-        </div>
       </Modal>
     </main>
   );
