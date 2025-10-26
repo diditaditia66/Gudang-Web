@@ -21,18 +21,17 @@ export default function AmbilPage() {
   const [all, setAll] = useState<Barang[]>([]);
   const [history, setHistory] = useState<History[]>([]);
   const [confirmAll, setConfirmAll] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => { loadBarang(); loadHistory(); }, []);
 
   async function loadBarang() {
     const r = await fetch("/api/backend/get_barang", { cache: "no-store" });
-    if (r.ok) setAll(await r.json());
-    else setAll([]);
+    if (r.ok) setAll(await r.json()); else setAll([]);
   }
   async function loadHistory() {
     const r = await fetch("/api/backend/get_history", { cache: "no-store" });
-    if (r.ok) setHistory(await r.json());
-    else setHistory([]);
+    if (r.ok) setHistory(await r.json()); else setHistory([]);
   }
 
   const suggestNama = useMemo(() => {
@@ -49,7 +48,8 @@ export default function AmbilPage() {
   const canSubmit = nama && lokasi && jumlah !== "" && Number(jumlah) > 0;
 
   async function ambil() {
-    const res = await fetch("/api/backend/update_barang", {
+    setMsg(null);
+    const res = await fetch("/api/backend/ambil_barang", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nama_barang: nama, jumlah: Number(jumlah), lokasi, aksi: "Ambil Barang", username })
@@ -57,6 +57,9 @@ export default function AmbilPage() {
     if (res.ok) {
       setNama(""); setJumlah(""); setLokasi("");
       await loadBarang(); await loadHistory();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setMsg(data?.message || "Gagal ambil barang");
     }
   }
 
@@ -82,6 +85,7 @@ export default function AmbilPage() {
           <Input placeholder="Lokasi" value={lokasi} onChange={(e) => setLokasi(e.target.value)} />
           <Button className="w-full" variant="primary" disabled={!canSubmit}>Ambil</Button>
         </form>
+        {msg && <p className="text-sm text-red-600 mt-2">{msg}</p>}
       </CardBody></Card>
 
       <div className="flex items-center justify-between">

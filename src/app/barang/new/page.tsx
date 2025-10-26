@@ -11,25 +11,15 @@ export default function TambahBarangPage() {
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    const m = document.cookie.match(/(?:^|;\\s*)u=([^;]+)/);
+    const m = document.cookie.match(/(?:^|;\s*)u=([^;]+)/);
     setUsername(m ? decodeURIComponent(m[1]) : "");
   }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setMsg("");
-    const body = {
-      nama_barang,
-      jumlah: Number(jumlah || 0),
-      lokasi,
-      aksi: "Tambah Barang",
-      username: username || "web",
-    };
-    const r2 = await fetch("/api/backend/add_barang", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const body = { nama_barang, jumlah: Number(jumlah || 0), lokasi, aksi: "Tambah Barang", username: username || "web" };
+    const r2 = await fetch("/api/backend/add_barang", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const data = await r2.json().catch(() => ({}));
     if (!r2.ok) setMsg(data?.message || "Gagal menambah");
     else r.replace("/home");

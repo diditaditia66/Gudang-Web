@@ -1,3 +1,4 @@
+// src/app/list/page.tsx
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardBody } from "@/components/ui/Card";
@@ -11,9 +12,19 @@ export default function ListPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [q, setQ] = useState("");
   const [confirm, setConfirm] = useState<{open:boolean; nama?:string; lokasi?:string}>({open:false});
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(()=>{ load(); },[]);
-  async function load(){ const r=await fetch(process.env.NEXT_PUBLIC_API_BASE_URL+"/get_barang"); setRows(await r.json()); }
+  async function load(){
+    setLoading(true); setMsg(null);
+    try{
+      const r = await fetch("/api/backend/get_barang", { cache:"no-store" });
+      if(!r.ok) throw new Error("Gagal memuat");
+      setRows(await r.json());
+    }catch(e:any){ setMsg(e?.message || "Gagal memuat"); }
+    finally{ setLoading(false); }
+  }
 
   const filtered = useMemo(()=>{
     const s=q.toLowerCase();
@@ -22,10 +33,16 @@ export default function ListPage() {
   },[rows,q]);
 
   async function remove(nama:string, lokasi:string){
-    await fetch(process.env.NEXT_PUBLIC_API_BASE_URL+"/delete_barang",{
-      method:"DELETE", headers:{ "Content-Type":"application/json" },
+    setMsg(null);
+    const r = await fetch("/api/backend/delete_barang",{
+      method:"DELETE",
+      headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({ nama_barang:nama, lokasi })
     });
+    if(!r.ok){
+      const d = await r.json().catch(()=> ({}));
+      setMsg(d?.message || "Gagal menghapus barang");
+    }
     setConfirm({open:false}); await load();
   }
 
@@ -38,6 +55,8 @@ export default function ListPage() {
           <Input placeholder="Cari Barang/Lokasi" value={q} onChange={(e)=>setQ(e.target.value)} />
         </div>
       </CardBody></Card>
+
+      {msg && <div className="text-sm text-red-600">{msg}</div>}
 
       <Card><CardBody>
         <div className="overflow-auto rounded-xl border">
@@ -52,10 +71,13 @@ export default function ListPage() {
                   <td className="td">{b.jumlah}</td>
                   <td className="td"><span className="tag">{b.lokasi}</span></td>
                   <td className="td">
-                    <Button onClick={()=>setConfirm({open:true, nama:b.nama_barang, lokasi:b.lokasi})}>Hapus</Button>
+                    <Button disabled={loading} onClick={()=>setConfirm({open:true, nama:b.nama_barang, lokasi:b.lokasi})}>Hapus</Button>
                   </td>
                 </tr>
               ))}
+              {!loading && filtered.length===0 && (
+                <tr><td className="td" colSpan={4}>Tidak ada data.</td></tr>
+              )}
             </tbody>
           </table>
         </div>

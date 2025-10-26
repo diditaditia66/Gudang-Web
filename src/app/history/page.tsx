@@ -1,15 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-type History = {
-  id: number;
-  nama_barang: string;
-  jumlah: number;
-  lokasi: string;
-  aksi: string;
-  username: string;
-  waktu: string;
-};
+type History = { id: number; nama_barang: string; jumlah: number; lokasi: string; aksi: string; username: string; waktu: string; };
 
 export default function HistoryPage() {
   const [data, setData] = useState<History[]>([]);
@@ -17,13 +9,11 @@ export default function HistoryPage() {
   const [err, setErr] = useState<string | null>(null);
 
   async function load() {
-    setLoading(true);
-    setErr(null);
+    setLoading(true); setErr(null);
     try {
       const r = await fetch("/api/backend/get_history", { cache: "no-store" });
       if (!r.ok) throw new Error(`Backend ${r.status}`);
-      const json: History[] = await r.json();
-      setData(json);
+      setData(await r.json());
     } catch (e: any) {
       setErr(e?.message || "Gagal memuat history");
     } finally {
