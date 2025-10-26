@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type History = {
@@ -22,10 +22,9 @@ export default function HistoryPage() {
     setLoading(true);
     setErr(null);
     try {
-      const r = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/get_history`,
-        { cache: "no-store" }
-      );
+      const r = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get_history`, {
+        cache: "no-store",
+      });
       if (!r.ok) throw new Error(`Backend ${r.status}`);
       const json: History[] = await r.json();
       setData(json);
@@ -80,7 +79,7 @@ export default function HistoryPage() {
                 <td className="td">{h.username}</td>
               </tr>
             ))}
-            {(!loading && data.length === 0) && (
+            {!loading && data.length === 0 && (
               <tr>
                 <td className="td" colSpan={6}>
                   Belum ada data.
@@ -91,31 +90,5 @@ export default function HistoryPage() {
         </table>
       </div>
     </div>
-  );
-}
-
-// (opsional) contoh tombol hapus satu item jika backend sediakan endpointnya
-export function DeleteOne({ id }: { id: number }) {
-  const [pending, start] = useTransition();
-  return (
-    <button
-      className="btn"
-      disabled={pending}
-      onClick={() =>
-        start(async () => {
-          await fetch(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/delete_history`,
-            {
-              method: "DELETE",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id }),
-            }
-          );
-          // reload boleh dipanggil dari parent lewat props kalau diperlukan
-        })
-      }
-    >
-      {pending ? "..." : "Hapus"}
-    </button>
   );
 }
