@@ -3,44 +3,30 @@ frontend:
   phases:
     preBuild:
       commands:
-        # --- Node 20 wajib (handle container yg belum aktif nvm) ---
         - "if command -v node >/dev/null 2>&1; then echo 'Node exists:' $(node -v); else echo 'Bootstrapping nvm...'; fi"
         - ". ~/.nvm/nvm.sh || true"
         - "if command -v nvm >/dev/null 2>&1; then nvm install 20 && nvm use 20; fi"
         - "echo RUN: PWD=$(pwd)  |  Node=$(node -v)  npm=$(npm -v)"
 
-        # --- Lockfile wajib untuk npm ci ---
         - "test -f package-lock.json || (echo 'ERROR: package-lock.json missing' && exit 1)"
-
-        # --- Bersihkan cache lama ---
         - "rm -rf node_modules .next .next/cache"
-
-        # --- Install deps + devDeps (Tailwind/PostCSS/TS/ESLint) ---
         - "npm ci --include=dev"
 
-        # --- Sanity check: Tailwind harus terpasang ---
+        # Cek Tailwind TERPASANG (tanpa jalankan CLI)
         - "npm ls tailwindcss || true"
-        - "npx tailwindcss -v || (echo 'ERROR: Tailwind not found after npm ci' && exit 1)"
         - "node -e \"require('tailwindcss'); console.log('tailwind ok')\""
 
-        # --- Verifikasi alias @ di tsconfig.json (@/* -> src/*) ---
+        # Verifikasi alias @ di tsconfig.json
         - "test -f tsconfig.json || (echo 'ERROR: tsconfig.json tidak ditemukan di root' && exit 1)"
         - "node -e \"const f=require('./tsconfig.json'); const ok=f?.compilerOptions?.paths?.['@/*']; if(!ok){console.error('ERROR: Alias @ belum dikonfigurasi di tsconfig.json'); process.exit(1)} console.log('Alias @ OK ->', ok)\""
 
     build:
       commands:
-        # --- Hardening environment ---
         - "export NEXT_TELEMETRY_DISABLED=1"
         - "export NODE_OPTIONS='--max_old_space_size=4096'"
-
-        # --- ENV wajib dari Amplify ---
         - "test -n \"$NEXT_PUBLIC_API_BASE_URL\" || (echo 'ERROR: NEXT_PUBLIC_API_BASE_URL belum di-set di Amplify Environment variables' && exit 1)"
-
-        # --- Inject ENV ke Next saat build (file tdk di-track git) ---
         - "echo \"NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL\" > .env.production"
         - "echo '.env.production:' && cat .env.production"
-
-        # --- Build Next.js (SSR) ---
         - "npm run build"
 
   artifacts:
