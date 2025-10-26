@@ -1,18 +1,10 @@
 // src/app/api/backend/[...path]/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { getServerEnv } from "@/lib/server-env";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function pickBackendBase() {
-  return (
-    process.env.BACKEND_BASE?.trim() ||
-    process.env.NEXT_PUBLIC_BACKEND_BASE?.trim() ||
-    "https://api.cartenz-vpn.my.id"
-  );
-}
-
-// retry sederhana
 async function withRetry<T>(fn: () => Promise<T>, times = 2, delayMs = 400): Promise<T> {
   let lastErr: unknown;
   for (let i = 0; i <= times; i++) {
@@ -25,41 +17,34 @@ async function withRetry<T>(fn: () => Promise<T>, times = 2, delayMs = 400): Pro
 }
 
 async function handle(req: NextRequest, { params }: { params: { path: string[] } }) {
-  const base = pickBackendBase();
-
-  // ⬅️ BACA env DI SINI SETIAP REQUEST
-  const SERVICE_BEARER = (process.env.BACKEND_BEARER || "").trim();
-  if (!SERVICE_BEARER) {
-    return NextResponse.json(
-      { message: "BACKEND_BEARER env var tidak di-set pada server (runtime)." },
-      { status: 401 }
-    );
+  let BACKEND_BASE: string, BACKEND_BEARER: string;
+  try {
+    ({ BACKEND_BASE, BACKEND_BEARER } = getServerEnv());
+  } catch (e: any) {
+    return NextResponse.json({ message: e?.message || "Server env missing" }, { status: 401 });
   }
 
   const path = params.path.join("/");
   const url = new URL(req.url);
-  const qs = url.search || "";
-  const dest = `${base.replace(/\/+$/, "")}/${path}${qs}`;
+  const dest = `${BACKEND_BASE.replace(/\/+$/, "")}/${path}${url.search || ""}`;
 
   const headers = new Headers();
-  req.headers.forEach((value, key) => {
-    const k = key.toLowerCase();
-    if (k === "host" || k === "content-length" || k === "connection") return;
-    headers.set(key, value);
+  req.headers.forEach((v, k) => {
+    const key = k.toLowerCase();
+    if (key === "host" || key === "content-length" || key === "connection") return;
+    headers.set(k, v);
   });
 
-  // Force Bearer backend
-  headers.set("authorization", `Bearer ${SERVICE_BEARER}`);
-
+  // pakai service bearer
+  headers.set("authorization", `Bearer ${BACKEND_BEARER}`);
   if (!headers.has("content-type") && req.method !== "GET" && req.method !== "HEAD") {
     headers.set("content-type", "application/json");
   }
-  headers.set("X-Forwarded-Proto", "https");
-  headers.set("User-Agent", "Next.js Server (Proxy)");
+  headers.set("x-forwarded-proto", "https");
+  headers.set("user-agent", "Next.js Server (Proxy)");
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
-
   const init: RequestInit = {
     method: req.method,
     headers,
