@@ -1,11 +1,9 @@
-// src/app/ambil/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardBody } from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import Autocomplete from "@/components/ui/Autocomplete";
 import Modal from "@/components/ui/Modal";
 import { getUsername } from "@/lib/user-client";
 
@@ -27,8 +25,11 @@ export default function AmbilPage() {
   const [msgOk, setMsgOk] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { const u = getUsername(); if (u) setUsername(u); }, []);
-  useEffect(() => { void reloadAll(); }, []);
+  useEffect(() => {
+    const u = getUsername();
+    if (u) setUsername(u);
+    void reloadAll();
+  }, []);
 
   async function reloadAll() {
     setLoading(true);
@@ -36,7 +37,7 @@ export default function AmbilPage() {
     try {
       const [rb, rh] = await Promise.all([
         fetch("/api/backend/get_barang", { cache: "no-store" }),
-        fetch("/api/backend/get_history", { cache: "no-store" })
+        fetch("/api/backend/get_history", { cache: "no-store" }),
       ]);
       setAll(rb.ok ? await rb.json() : []);
       setHistory(rh.ok ? await rh.json() : []);
@@ -47,28 +48,35 @@ export default function AmbilPage() {
     }
   }
 
+  // Saran nama barang (suggestion)
   const suggestNama = useMemo(() => {
     const q = nama.toLowerCase().trim();
     if (!q) return [];
     return all
-      .map(b => b.nama_barang)
+      .map((b) => b.nama_barang)
       .filter((v, i, arr) => arr.indexOf(v) === i)
-      .filter(v => v.toLowerCase().includes(q))
+      .filter((v) => v.toLowerCase().includes(q))
       .slice(0, 8);
+  }, [all, nama]);
+
+  // Lokasi yang tersedia sesuai nama
+  const lokasiList = useMemo(() => {
+    return all
+      .filter((b) => b.nama_barang === nama)
+      .map((b) => b.lokasi)
+      .filter((v, i, arr) => arr.indexOf(v) === i);
   }, [all, nama]);
 
   function pickNama(v: string) {
     setNama(v);
-    // Jika ada baris cocok, auto set lokasi pertama
-    const found = all.find(b => b.nama_barang === v);
+    const found = all.find((b) => b.nama_barang === v);
     if (found) setLokasi(found.lokasi);
   }
 
   const stokSaatIni = useMemo(() => {
     if (!nama) return undefined;
-    // stok gabungan semua lokasi untuk nama tsb
     const total = all
-      .filter(b => b.nama_barang === nama)
+      .filter((b) => b.nama_barang === nama)
       .reduce((acc, it) => acc + (Number(it.jumlah) || 0), 0);
     return isNaN(total) ? 0 : total;
   }, [all, nama]);
@@ -84,15 +92,23 @@ export default function AmbilPage() {
       const res = await fetch("/api/backend/ambil_barang", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nama_barang: nama, jumlah: Number(jumlah), lokasi, aksi: "Ambil Barang", username })
+        body: JSON.stringify({
+          nama_barang: nama,
+          jumlah: Number(jumlah),
+          lokasi,
+          aksi: "Ambil Barang",
+          username,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setMsgError(data?.message || "Gagal ambil barang");
         return;
       }
-      setMsgOk("Berhasil mencatat pengambilan.");
-      setNama(""); setJumlah(""); setLokasi("");
+      setMsgOk("✅ Berhasil mencatat pengambilan.");
+      setNama("");
+      setJumlah("");
+      setLokasi("");
       await reloadAll();
     } catch (e: any) {
       setMsgError(e?.message || "Kesalahan jaringan / server");
@@ -107,7 +123,7 @@ export default function AmbilPage() {
       await fetch("/api/backend/delete_history", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(id ? { id } : {})
+        body: JSON.stringify(id ? { id } : {}),
       });
       setConfirmAll(false);
       await reloadAll();
@@ -118,64 +134,108 @@ export default function AmbilPage() {
 
   return (
     <div className="grid gap-5">
+      {/* HEADER */}
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Ambil Barang</h1>
-          <div className="text-sm text-gray-600">User: <b>{username || "-"}</b></div>
+          <div className="text-sm text-gray-600">
+            User: <b>{username || "-"}</b>
+          </div>
         </div>
         <Button onClick={() => reloadAll()} disabled={loading} variant="secondary">
           {loading ? "Memuat..." : "Refresh"}
         </Button>
       </div>
 
+      {/* FORM AMBIL BARANG */}
       <Card>
         <CardBody>
           <form
             className="grid gap-3 md:grid-cols-4"
-            onSubmit={(e) => { e.preventDefault(); if (canSubmit) void ambil(); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (canSubmit) void ambil();
+            }}
           >
-            <div>
-              <Autocomplete
-                value={nama}
-                onChange={setNama}
-                suggestions={suggestNama}
-                onPick={pickNama}
+            {/* NAMA BARANG */}
+            <div className="relative">
+              <Input
                 placeholder="Nama Barang"
+                value={nama}
+                onChange={(e) => setNama(e.target.value)}
               />
+              {suggestNama.length > 0 && (
+                <ul className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-48 overflow-auto">
+                  {suggestNama.map((s) => (
+                    <li
+                      key={s}
+                      onClick={() => pickNama(s)}
+                      className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm"
+                    >
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              )}
               {!!stokSaatIni && (
                 <div className="mt-1 text-xs text-gray-500">
-                  Perkiraan stok total: <b>{stokSaatIni}</b>
+                  Stok total: <b>{stokSaatIni}</b>
                 </div>
               )}
             </div>
 
+            {/* JUMLAH */}
             <div>
               <Input
                 type="number"
                 min={1}
                 placeholder="Jumlah diambil"
                 value={jumlah}
-                onChange={(e) => setJumlah(e.target.value === "" ? "" : Number(e.target.value))}
+                onChange={(e) =>
+                  setJumlah(e.target.value === "" ? "" : Number(e.target.value))
+                }
               />
               <div className="mt-1 text-xs text-gray-500">Isi angka &gt; 0</div>
             </div>
 
+            {/* LOKASI */}
             <div>
-              <Input
-                placeholder="Lokasi"
-                value={lokasi}
-                onChange={(e) => setLokasi(e.target.value)}
-              />
-              <div className="mt-1 text-xs text-gray-500">Contoh: Rak A, Gudang A</div>
+              {lokasiList.length > 0 ? (
+                <select
+                  className="w-full rounded-xl border px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900/20"
+                  value={lokasi}
+                  onChange={(e) => setLokasi(e.target.value)}
+                >
+                  <option value="">Pilih lokasi</option>
+                  {lokasiList.map((l) => (
+                    <option key={l} value={l}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Input
+                  placeholder="Lokasi"
+                  value={lokasi}
+                  onChange={(e) => setLokasi(e.target.value)}
+                />
+              )}
+              <div className="mt-1 text-xs text-gray-500">Lokasi sesuai stok</div>
             </div>
 
+            {/* BUTTON */}
             <div className="flex items-end">
-              <Button className="w-full" variant="primary" disabled={!canSubmit || busy}>
+              <Button
+                className="w-full"
+                variant="primary"
+                disabled={!canSubmit || busy}
+              >
                 {busy ? "Memproses..." : "Catat Pengambilan"}
               </Button>
             </div>
           </form>
 
+          {/* STATUS */}
           {msgError && (
             <div className="mt-3 rounded-lg border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm">
               {msgError}
@@ -189,9 +249,12 @@ export default function AmbilPage() {
         </CardBody>
       </Card>
 
+      {/* HISTORY */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">History</h2>
-        <Button onClick={() => setConfirmAll(true)} disabled={busy}>Hapus Semua History</Button>
+        <Button onClick={() => setConfirmAll(true)} disabled={busy}>
+          Hapus Semua History
+        </Button>
       </div>
 
       <Card>
@@ -215,18 +278,31 @@ export default function AmbilPage() {
                     <td className="td">{new Date(h.waktu).toLocaleString()}</td>
                     <td className="td">{h.nama_barang}</td>
                     <td className="td">{h.jumlah}</td>
-                    <td className="td"><span className="tag">{h.lokasi ?? "-"}</span></td>
+                    <td className="td">
+                      <span className="tag">{h.lokasi ?? "-"}</span>
+                    </td>
                     <td className="td">{h.aksi}</td>
                     <td className="td">{h.username ?? "-"}</td>
                     <td className="td">
-                      <Button variant="secondary" onClick={() => hapusHistory(h.id)} disabled={busy}>Hapus</Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => hapusHistory(h.id)}
+                        disabled={busy}
+                      >
+                        Hapus
+                      </Button>
                     </td>
                   </tr>
                 ))}
                 {!loading && history.length === 0 && (
                   <tr>
-                    <td className="td py-10 text-center text-gray-500" colSpan={7}>
-                      <div className="mx-auto w-10 h-10 rounded-full bg-gray-100 grid place-items-center mb-2">📭</div>
+                    <td
+                      className="td py-10 text-center text-gray-500"
+                      colSpan={7}
+                    >
+                      <div className="mx-auto w-10 h-10 rounded-full bg-gray-100 grid place-items-center mb-2">
+                        📭
+                      </div>
                       Belum ada history.
                     </td>
                   </tr>
@@ -237,11 +313,20 @@ export default function AmbilPage() {
         </CardBody>
       </Card>
 
+      {/* MODAL KONFIRMASI */}
       <Modal open={confirmAll} onClose={() => setConfirmAll(false)} title="Konfirmasi">
         <p>Hapus <b>semua</b> history?</p>
         <div className="mt-4 flex justify-end gap-2">
-          <button className="btn" onClick={() => setConfirmAll(false)} disabled={busy}>Batal</button>
-          <button className="btn btn-primary" onClick={() => hapusHistory(undefined)} disabled={busy}>Hapus</button>
+          <button className="btn" onClick={() => setConfirmAll(false)} disabled={busy}>
+            Batal
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => hapusHistory(undefined)}
+            disabled={busy}
+          >
+            Hapus
+          </button>
         </div>
       </Modal>
     </div>
