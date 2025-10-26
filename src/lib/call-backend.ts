@@ -1,19 +1,15 @@
+// src/lib/call-backend.ts
 "use client";
-import { fetchAuthSession } from "aws-amplify/auth";
 
-/**
- * Panggil backend melalui proxy Next: /api/backend/...
- * Akan otomatis menambahkan Authorization: Bearer <idToken>.
- */
-export async function callBackend(path: string, init?: RequestInit) {
-  const { tokens } = await fetchAuthSession();
-  const idToken = tokens?.idToken?.toString(); // pakai idToken; ganti ke accessToken jika backend memverifikasi access token
-
-  const headers = new Headers(init?.headers ?? {});
-  if (!headers.has("Content-Type") && init?.body) {
-    headers.set("Content-Type", "application/json");
+export async function callBackend(path: string, opts: RequestInit = {}) {
+  const headers = new Headers(opts.headers || {});
+  if (!headers.has("content-type") && typeof opts.body === "string") {
+    headers.set("content-type", "application/json");
   }
-  if (idToken) headers.set("Authorization", `Bearer ${idToken}`);
-
-  return fetch(path, { ...init, headers, cache: "no-store" });
+  return fetch(path, {
+    ...opts,
+    headers,
+    cache: "no-store",
+    credentials: "include",
+  });
 }

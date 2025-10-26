@@ -12,16 +12,20 @@ function pickBackendBase() {
   );
 }
 
-// retry helper
+const SERVICE_BEARER = process.env.BACKEND_BEARER?.trim() || "";
+
+if (!SERVICE_BEARER) {
+  // Biar gagal kelihatan jelas waktu build/dev kalau lupa set token
+  console.warn("[proxy] BACKEND_BEARER tidak di-set. Semua panggilan backend akan 401/500.");
+}
+
+// retry sederhana
 async function withRetry<T>(fn: () => Promise<T>, times = 2, delayMs = 400): Promise<T> {
   let lastErr: unknown;
   for (let i = 0; i <= times; i++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastErr = err;
-      if (i === times) break;
-      await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+    try { return await fn(); } catch (err) {
+      lastErr = err; if (i === times) break;
+      await new Promise(r => setTimeout(r, delayMs * (i + 1)));
     }
   }
   throw lastErr;
@@ -29,12 +33,12 @@ async function withRetry<T>(fn: () => Promise<T>, times = 2, delayMs = 400): Pro
 
 async function handle(req: NextRequest, { params }: { params: { path: string[] } }) {
   const base = pickBackendBase();
+
   const path = params.path.join("/");
   const url = new URL(req.url);
   const qs = url.search || "";
   const dest = `${base.replace(/\/+$/, "")}/${path}${qs}`;
 
-  // ✅ teruskan SEMUA header masuk (termasuk Authorization)
   const headers = new Headers();
   req.headers.forEach((value, key) => {
     const k = key.toLowerCase();
@@ -42,6 +46,21 @@ async function handle(req: NextRequest, { params }: { params: { path: string[] }
     headers.set(key, value);
   });
 
+  // ⬇️ Force pakai token backend pada setiap request
+  if (SERVICE_BEARER) {
+    headers.set("authorization", `Bearer ${SERVICE_BEARER}`);
+    // bila backend historis memakai nama header lain, bisa duplikasi:
+    // headers.set("token", SERVICE_BEARER);
+    // headers.set("x-access-token", SERVICE_BEARER);
+  } else {
+    // Tanpa token backend, kita balas jelas agar mudah didiagnosis
+    return NextResponse.json(
+      { message: "BACKEND_BEARER env var tidak di-set pada server." },
+      { status: 401 }
+    );
+  }
+
+  // pastikan Content-Type ada untuk request ber-body
   if (!headers.has("content-type") && req.method !== "GET" && req.method !== "HEAD") {
     headers.set("content-type", "application/json");
   }
@@ -49,7 +68,7 @@ async function handle(req: NextRequest, { params }: { params: { path: string[] }
   headers.set("User-Agent", "Next.js Server (Proxy)");
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 7000);
+  const timeout = setTimeout(() => controller.abort(), 10000);
 
   const init: RequestInit = {
     method: req.method,
@@ -63,8 +82,8 @@ async function handle(req: NextRequest, { params }: { params: { path: string[] }
     const r = await withRetry(() => fetch(dest, init));
     clearTimeout(timeout);
 
-    const bodyBuf = await r.arrayBuffer();
-    const out = new NextResponse(bodyBuf, { status: r.status });
+    const buf = await r.arrayBuffer();
+    const out = new NextResponse(buf, { status: r.status });
     r.headers.forEach((v, k) => out.headers.set(k, v));
     return out;
   } catch (err: any) {
