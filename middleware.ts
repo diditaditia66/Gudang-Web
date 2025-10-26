@@ -10,6 +10,7 @@ const PUBLIC_API = [
   "/api/login",
   "/api/logout",
   "/api/ping-backend",
+  "/api/debug",
   "/api/backend",            // ✅ lewati proxy backend
 ] as const;
 

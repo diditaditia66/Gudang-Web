@@ -12,13 +12,6 @@ function pickBackendBase() {
   );
 }
 
-const SERVICE_BEARER = process.env.BACKEND_BEARER?.trim() || "";
-
-if (!SERVICE_BEARER) {
-  // Biar gagal kelihatan jelas waktu build/dev kalau lupa set token
-  console.warn("[proxy] BACKEND_BEARER tidak di-set. Semua panggilan backend akan 401/500.");
-}
-
 // retry sederhana
 async function withRetry<T>(fn: () => Promise<T>, times = 2, delayMs = 400): Promise<T> {
   let lastErr: unknown;
@@ -34,6 +27,15 @@ async function withRetry<T>(fn: () => Promise<T>, times = 2, delayMs = 400): Pro
 async function handle(req: NextRequest, { params }: { params: { path: string[] } }) {
   const base = pickBackendBase();
 
+  // ⬅️ BACA env DI SINI SETIAP REQUEST
+  const SERVICE_BEARER = (process.env.BACKEND_BEARER || "").trim();
+  if (!SERVICE_BEARER) {
+    return NextResponse.json(
+      { message: "BACKEND_BEARER env var tidak di-set pada server (runtime)." },
+      { status: 401 }
+    );
+  }
+
   const path = params.path.join("/");
   const url = new URL(req.url);
   const qs = url.search || "";
@@ -46,21 +48,9 @@ async function handle(req: NextRequest, { params }: { params: { path: string[] }
     headers.set(key, value);
   });
 
-  // ⬇️ Force pakai token backend pada setiap request
-  if (SERVICE_BEARER) {
-    headers.set("authorization", `Bearer ${SERVICE_BEARER}`);
-    // bila backend historis memakai nama header lain, bisa duplikasi:
-    // headers.set("token", SERVICE_BEARER);
-    // headers.set("x-access-token", SERVICE_BEARER);
-  } else {
-    // Tanpa token backend, kita balas jelas agar mudah didiagnosis
-    return NextResponse.json(
-      { message: "BACKEND_BEARER env var tidak di-set pada server." },
-      { status: 401 }
-    );
-  }
+  // Force Bearer backend
+  headers.set("authorization", `Bearer ${SERVICE_BEARER}`);
 
-  // pastikan Content-Type ada untuk request ber-body
   if (!headers.has("content-type") && req.method !== "GET" && req.method !== "HEAD") {
     headers.set("content-type", "application/json");
   }
