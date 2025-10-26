@@ -1,112 +1,87 @@
-// src/app/home/page.tsx
 "use client";
-
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import Button from "@/components/ui/Button";
 import { getUsername } from "@/lib/user-client";
-
-function ActionCard({
-  href,
-  title,
-  desc,
-  emoji,
-}: {
-  href: string;
-  title: string;
-  desc: string;
-  emoji: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group rounded-2xl border bg-white/70 backdrop-blur-md hover:bg-white shadow-md hover:shadow-xl transition block p-5"
-    >
-      <div className="flex items-center gap-3">
-        <div className="text-2xl">{emoji}</div>
-        <div>
-          <div className="font-semibold group-hover:text-gray-900">{title}</div>
-          <div className="text-sm text-gray-500">{desc}</div>
-        </div>
-      </div>
-    </Link>
-  );
-}
+import { Plus, PackageOpen, FileText } from "lucide-react";
 
 export default function HomePage() {
-  const [u, setU] = useState<string | null>(null);
-  useEffect(() => setU(getUsername()), []);
+  const [username, setUsername] = useState<string | null>(null);
+  useEffect(() => setUsername(getUsername()), []);
 
   return (
-    <div className="relative min-h-[calc(100vh-56px)]">
-      {/* background */}
-      <div
-        className="absolute inset-0 bg-cover bg-top"
-        style={{ backgroundImage: "url(/assets/background/background1.png)" }}
-        aria-hidden
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-white/70 to-white" />
+    <div className="min-h-[calc(100vh-56px)] flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-white">
+      <div className="container text-center px-4">
+        <h1 className="text-4xl md:text-5xl font-bold mb-3 text-gray-900">
+          Selamat datang di <span className="text-indigo-600">Gudang</span>
+        </h1>
+        <p className="text-gray-600 mb-8">
+          Kelola stok & riwayat barang Anda dengan mudah dan cepat.
+        </p>
 
-      {/* content */}
-      <div className="relative container mx-auto px-4 py-10">
-        <div className="text-center">
-          {u && (
-            <div className="inline-block rounded-full bg-white/70 backdrop-blur px-4 py-1 text-sm text-gray-700 shadow">
-              Masuk sebagai <b>{u}</b>
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-10">
+          <Link href="/barang/new" className="group">
+            <div className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow-sm hover:shadow-md border transition-all duration-200">
+              <div className="p-3 bg-gradient-to-r from-indigo-400 to-purple-500 text-white rounded-full shadow">
+                <Plus size={28} />
+              </div>
+              <div className="text-left">
+                <h3 className="font-semibold text-lg text-gray-900 group-hover:text-indigo-600">
+                  Tambah Barang
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Input barang baru atau tambah jumlah.
+                </p>
+              </div>
             </div>
-          )}
-          <h1 className="mt-4 text-3xl md:text-4xl font-semibold tracking-tight text-gray-900">
-            Selamat datang di <span className="underline decoration-gray-300">Gudang</span>
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Kelola stok & riwayat barang Anda dengan mudah.
-          </p>
-        </div>
-
-        {/* quick actions */}
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <ActionCard
-            href="/barang/new"
-            title="Tambah Barang"
-            desc="Input barang baru atau tambah jumlah."
-            emoji="➕"
-          />
-          <ActionCard
-            href="/ambil"
-            title="Ambil Barang"
-            desc="Catat pengambilan stok secara cepat."
-            emoji="📦"
-          />
-          <ActionCard
-            href="/list"
-            title="List Barang"
-            desc="Lihat, cari, dan kelola data barang."
-            emoji="📋"
-          />
-        </div>
-
-        {/* big CTA (tambahan tombol besar) */}
-        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link href="/barang/new">
-            <Button className="w-64" variant="primary">Tambah Barang</Button>
           </Link>
-          <Link href="/ambil">
-            <Button className="w-64" variant="primary">Ambil Barang</Button>
+
+          <Link href="/ambil" className="group">
+            <div className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow-sm hover:shadow-md border transition-all duration-200">
+              <div className="p-3 bg-gradient-to-r from-amber-500 to-orange-400 text-white rounded-full shadow">
+                <PackageOpen size={28} />
+              </div>
+              <div className="text-left">
+                <h3 className="font-semibold text-lg text-gray-900 group-hover:text-amber-600">
+                  Ambil Barang
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Catat pengambilan stok secara cepat.
+                </p>
+              </div>
+            </div>
           </Link>
-          <Link href="/list">
-            <Button className="w-64" variant="primary">List Barang</Button>
+
+          <Link href="/list" className="group">
+            <div className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow-sm hover:shadow-md border transition-all duration-200">
+              <div className="p-3 bg-gradient-to-r from-orange-400 to-pink-500 text-white rounded-full shadow">
+                <FileText size={28} />
+              </div>
+              <div className="text-left">
+                <h3 className="font-semibold text-lg text-gray-900 group-hover:text-pink-600">
+                  List Barang
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Lihat, cari, dan kelola data barang.
+                </p>
+              </div>
+            </div>
           </Link>
         </div>
 
-        {/* info box */}
-        <div className="mt-10 mx-auto max-w-3xl rounded-2xl border bg-white/70 backdrop-blur-md p-5 shadow">
-          <div className="font-medium text-gray-800">Tips</div>
-          <ul className="mt-2 text-sm text-gray-600 list-disc pl-5 space-y-1">
+        <div className="max-w-3xl mx-auto bg-white/60 backdrop-blur-sm border rounded-2xl p-6 shadow-sm text-left">
+          <h4 className="font-semibold mb-2 text-gray-800">Tips</h4>
+          <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
             <li>Gunakan kolom pencarian di halaman “List Barang” untuk menemukan item lebih cepat.</li>
             <li>Semua aksi (tambah/ambil/hapus) otomatis tercatat di “History”.</li>
-            <li>Keamanan: login menggunakan cookie HttpOnly & validasi JWT di server.</li>
+            <li>Login aman menggunakan cookie HttpOnly & validasi JWT di server.</li>
           </ul>
         </div>
+
+        {username && (
+          <div className="mt-6 text-gray-500 text-sm">
+            Login sebagai <b className="text-gray-800">{username}</b>
+          </div>
+        )}
       </div>
     </div>
   );
