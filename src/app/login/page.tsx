@@ -1,9 +1,10 @@
 // src/app/login/page.tsx
 "use client";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
 
-export default function LoginPage() {
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+function LoginInner() {
   const router = useRouter();
   const sp = useSearchParams();
   const next = sp.get("next") || "/";
@@ -65,3 +66,16 @@ export default function LoginPage() {
     </div>
   );
 }
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[70vh] grid place-items-center">Memuat...</div>}>
+      <LoginInner />
+    </Suspense>
+  );
+}
+
+// Jika ingin menghindari pre-render sepenuhnya untuk halaman ini,
+// bisa tambahkan salah satu di bawah (opsional):
+// export const dynamic = "force-dynamic";
+// export const revalidate = 0;
