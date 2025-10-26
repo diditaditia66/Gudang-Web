@@ -17,12 +17,12 @@ export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
   const token = req.cookies.get("token")?.value ?? null;
 
-  // 1) Izinkan semua public assets & API publik
+  // 1️⃣ Izinkan semua public assets & API publik
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
-  // 2) Jika belum login
+  // 2️⃣ Jika belum login
   if (!token) {
     // a) Untuk request API non-publik → balas 401 JSON
     if (pathname.startsWith("/api/")) {
@@ -31,14 +31,15 @@ export function middleware(req: NextRequest) {
         headers: { "Content-Type": "application/json" },
       });
     }
-    // b) Untuk halaman biasa → redirect ke /login?next=<path+query>
+
+    // b) Untuk halaman biasa → redirect ke /login?next=<path>
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname + (search || ""));
     return NextResponse.redirect(url);
   }
 
-  // 3) Jika sudah login dan mengakses /login → arahkan ke home
+  // 3️⃣ Jika sudah login dan mengakses /login → arahkan ke home
   if (pathname === "/login") {
     const nextParam = req.nextUrl.searchParams.get("next");
     const url = req.nextUrl.clone();
@@ -47,12 +48,13 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // ✅ Default: lanjutkan
   return NextResponse.next();
 }
 
 // Pastikan middleware tidak menangkap rute internal & API publik
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|api/(login|logout|ping-backend)).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/(login|logout|ping-backend)).*)",
   ],
 };

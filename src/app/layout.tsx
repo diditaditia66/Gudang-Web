@@ -1,29 +1,37 @@
-// src/app/layout.tsx
+"use client";
+
 import "./globals.css";
-import { cookies } from "next/headers";
+import { useEffect, useState } from "react";
 import jwt from "jsonwebtoken";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-export const metadata = {
-  title: process.env.NEXT_PUBLIC_APP_NAME || "Gudang",
-};
-
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = cookies();
-  const token = cookieStore.get("token")?.value;
-  let username: string | null = null;
+  const router = useRouter();
+  const [username, setUsername] = useState<string | null>(null);
 
-  if (token) {
-    try {
-      const decoded = jwt.decode(token) as { username?: string };
-      username = decoded?.username || null;
-    } catch {
-      username = null;
+  useEffect(() => {
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("token="))
+      ?.split("=")[1];
+    if (token) {
+      try {
+        const decoded = jwt.decode(token) as { username?: string };
+        setUsername(decoded?.username || null);
+      } catch {
+        setUsername(null);
+      }
     }
+  }, []);
+
+  async function handleLogout() {
+    await fetch("/api/logout", { method: "POST" });
+    router.replace("/login");
   }
 
   return (
@@ -36,14 +44,12 @@ export default async function RootLayout({
           </div>
           <div>
             {username ? (
-              <form action="/api/logout" method="post">
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-                >
-                  Logout
-                </button>
-              </form>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+              >
+                Logout
+              </button>
             ) : (
               <Link
                 href="/login"

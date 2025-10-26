@@ -1,4 +1,3 @@
-// src/app/login/page.tsx
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -25,7 +24,7 @@ function EyeIcon({ on }: { on: boolean }) {
 function LoginInner() {
   const router = useRouter();
   const sp = useSearchParams();
-  const next = useMemo(() => sp.get("next") || "/", [sp]);
+  const next = useMemo(() => sp.get("next") || "/home", [sp]);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
@@ -33,8 +32,8 @@ function LoginInner() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (document.cookie.includes("token=")) router.replace(next);
-  }, [router, next]);
+    if (document.cookie.includes("token=")) router.replace("/home");
+  }, [router]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,8 +46,11 @@ function LoginInner() {
         body: JSON.stringify({ username, password }),
       });
       const data = await r.json();
-      if (!r.ok) setMsg(data?.message || "Login gagal");
-      else router.replace(next);
+      if (!r.ok) {
+        setMsg(data?.message || "Login gagal");
+      } else {
+        router.replace("/home"); // ✅ langsung arahkan ke home
+      }
     } catch {
       setMsg("Kesalahan jaringan / server");
     } finally {
