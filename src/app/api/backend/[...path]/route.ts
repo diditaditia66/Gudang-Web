@@ -29,26 +29,22 @@ async function withRetry<T>(fn: () => Promise<T>, times = 2, delayMs = 400): Pro
 
 async function handle(req: NextRequest, { params }: { params: { path: string[] } }) {
   const base = pickBackendBase();
-
   const path = params.path.join("/");
   const url = new URL(req.url);
   const qs = url.search || "";
   const dest = `${base.replace(/\/+$/, "")}/${path}${qs}`;
 
-  // ✅ SALIN semua header masuk (termasuk Authorization) ke header keluar
+  // ✅ teruskan SEMUA header masuk (termasuk Authorization)
   const headers = new Headers();
   req.headers.forEach((value, key) => {
     const k = key.toLowerCase();
-    // buang header yang bermasalah untuk proxy
     if (k === "host" || k === "content-length" || k === "connection") return;
     headers.set(key, value);
   });
 
-  // pastikan Content-Type ada untuk request ber-body
   if (!headers.has("content-type") && req.method !== "GET" && req.method !== "HEAD") {
     headers.set("content-type", "application/json");
   }
-  // tambahkan header info proxy jika mau
   headers.set("X-Forwarded-Proto", "https");
   headers.set("User-Agent", "Next.js Server (Proxy)");
 
@@ -67,13 +63,9 @@ async function handle(req: NextRequest, { params }: { params: { path: string[] }
     const r = await withRetry(() => fetch(dest, init));
     clearTimeout(timeout);
 
-    // Teruskan response dari backend apa adanya (content-type, dll.)
     const bodyBuf = await r.arrayBuffer();
     const out = new NextResponse(bodyBuf, { status: r.status });
-    r.headers.forEach((v, k) => {
-      // optional: filter header tertentu jika perlu
-      out.headers.set(k, v);
-    });
+    r.headers.forEach((v, k) => out.headers.set(k, v));
     return out;
   } catch (err: any) {
     const msg = typeof err?.message === "string" ? err.message : String(err);
