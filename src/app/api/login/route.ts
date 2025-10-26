@@ -1,6 +1,10 @@
 // src/app/api/login/route.ts
 import { NextResponse } from "next/server";
 
+// pastikan route ini berjalan di Node runtime & tidak di-cache
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   try {
     const { username, password } = await req.json();
@@ -8,15 +12,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Username & password wajib" }, { status: 400 });
     }
 
-    const r = await fetch(`${process.env.BACKEND_BASE}/login`, {
+    const base = process.env.BACKEND_BASE;
+    if (!base) {
+      return NextResponse.json(
+        { message: "BACKEND_BASE is not set on server" },
+        { status: 500 }
+      );
+    }
+
+    const r = await fetch(`${base.replace(/\/+$/, "")}/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
       body: JSON.stringify({ username, password }),
+      // jangan cache
+      cache: "no-store",
+      // batas waktu biar tidak menggantung lama
+      signal: (AbortSignal as any).timeout?.(7000),
     });
 
-    const data = await r.json();
+    const data = await r.json().catch(() => ({}));
     if (!r.ok) {
-      return NextResponse.json(data, { status: r.status });
+      // teruskan pesan dari backend kalau ada
+      return NextResponse.json(
+        data?.message ? data : { message: `Login gagal (backend ${r.status})` },
+        { status: r.status }
+      );
     }
 
     const token: string = data.token;
@@ -28,7 +48,7 @@ export async function POST(req: Request) {
     res.cookies.set("token", token, {
       httpOnly: true,
       sameSite: "lax",
-      secure: true,
+      secure: true, // wajib true di https
       path: "/",
       maxAge: 60 * 60 * 8, // 8 jam
     });
@@ -43,7 +63,8 @@ export async function POST(req: Request) {
     });
 
     return res;
-  } catch (e) {
-    return NextResponse.json({ message: "Terjadi kesalahan server" }, { status: 500 });
+  } catch (e: any) {
+    const msg = typeof e?.message === "string" ? e.message : "Terjadi kesalahan server";
+    return NextResponse.json({ message: msg }, { status: 500 });
   }
 }
