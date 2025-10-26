@@ -1,53 +1,43 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import { confirmSignUp, resendSignUpCode } from "aws-amplify/auth";
+import { confirmSignUp } from "aws-amplify/auth";
 
-export default function VerifyPage() {
-  const router = useRouter();
-  const sp = useSearchParams();
-  const email = sp.get("email") || "";
-
+function VerifyInner() {
+  const searchParams = useSearchParams();
+  const email = searchParams.get("email") || "";
   const [code, setCode] = useState("");
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  async function onVerify(e: React.FormEvent) {
+  async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
-    setMsg("");
     setLoading(true);
+    setMsg("");
     try {
       await confirmSignUp({ username: email, confirmationCode: code });
-      router.push("/login");
+      setMsg("Verifikasi berhasil! Anda dapat login sekarang.");
+      setTimeout(() => router.push("/login"), 1500);
     } catch (err: any) {
-      setMsg(err.message || "Kode verifikasi salah");
+      setMsg(err.message || "Gagal memverifikasi akun");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function onResend() {
-    setMsg("");
-    try {
-      await resendSignUpCode({ username: email });
-      setMsg("Kode baru telah dikirim ke email.");
-    } catch (err: any) {
-      setMsg(err.message || "Gagal mengirim ulang kode");
     }
   }
 
   return (
     <div className="min-h-[calc(100vh-56px)] flex items-center justify-center bg-gray-50">
       <form
-        onSubmit={onVerify}
-        className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white shadow-lg p-6 space-y-4"
+        onSubmit={handleVerify}
+        className="w-full max-w-sm rounded-2xl border bg-white shadow-lg p-6 space-y-4"
       >
         <h1 className="text-2xl font-semibold text-center">Verifikasi Email</h1>
         <p className="text-sm text-gray-500 text-center">
-          Masukkan kode verifikasi yang dikirim ke <strong>{email}</strong>
+          Masukkan kode yang dikirim ke <b>{email}</b>
         </p>
 
         <Input
@@ -57,20 +47,20 @@ export default function VerifyPage() {
           required
         />
 
-        <Button type="submit" variant="primary" className="w-full" disabled={loading}>
+        <Button type="submit" variant="primary" className="w-full" disabled={!code || loading}>
           {loading ? "Memverifikasi..." : "Verifikasi"}
         </Button>
 
-        <button
-          type="button"
-          onClick={onResend}
-          className="w-full text-sm text-blue-600 hover:underline mt-2"
-        >
-          Kirim ulang kode
-        </button>
-
-        {msg && <p className="text-sm text-center text-red-600">{msg}</p>}
+        {msg && <p className="text-center text-sm text-red-600">{msg}</p>}
       </form>
     </div>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[70vh] grid place-items-center">Memuat...</div>}>
+      <VerifyInner />
+    </Suspense>
   );
 }
