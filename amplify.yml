@@ -1,24 +1,37 @@
 version: 1
+
 frontend:
   phases:
     preBuild:
       commands:
-        - echo "🔧 Menginstal TypeScript dan definisi types..."
-        - npm install --save-dev typescript @types/react @types/node
-
-        - echo "🧹 Membersihkan cache..."
+        - echo "Node before nvm:" && node -v || true
+        - if [ -f "$HOME/.nvm/nvm.sh" ]; then . "$HOME/.nvm/nvm.sh"; fi
+        - if command -v nvm >/dev/null 2>&1; then nvm install 20 && nvm use 20; fi
+        - echo "Using Node:" && node -v
         - rm -rf node_modules .next
-        - npm ci --include=dev
-
-        - echo "✅ Dependencies siap."
+        - npm ci --no-audit --no-fund
 
     build:
       commands:
-        - echo "🚀 Building Next.js project..."
         - export NEXT_TELEMETRY_DISABLED=1
         - export NODE_OPTIONS="--max_old_space_size=4096"
-        - echo "NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL" > .env.production
-        - cat .env.production
+
+        # Tulis env ke .env.production (JANGAN echo ke log)
+        - echo "Menulis .env.production untuk runtime SSR..."
+        - rm -f .env.production
+        - printf "NEXTAUTH_URL=%s\n" "$NEXTAUTH_URL" >> .env.production
+        - printf "NEXTAUTH_SECRET=%s\n" "$NEXTAUTH_SECRET" >> .env.production
+        - printf "COGNITO_CLIENT_ID=%s\n" "$COGNITO_CLIENT_ID" >> .env.production
+        - printf "COGNITO_CLIENT_SECRET=%s\n" "$COGNITO_CLIENT_SECRET" >> .env.production
+        - printf "COGNITO_ISSUER=%s\n" "$COGNITO_ISSUER" >> .env.production
+        - printf "BACKEND_BASE=%s\n" "$BACKEND_BASE" >> .env.production
+        - printf "BACKEND_BEARER=%s\n" "$BACKEND_BEARER" >> .env.production
+        - printf "NEXT_PUBLIC_API_BASE_URL=%s\n" "$NEXT_PUBLIC_API_BASE_URL" >> .env.production
+        - printf "NEXT_PUBLIC_AWS_REGION=%s\n" "$NEXT_PUBLIC_AWS_REGION" >> .env.production
+
+        # Tampilkan hanya key agar tahu file terbuat (tanpa nilai)
+        - echo "Keys in .env.production:" && awk -F= '{print $1}' .env.production
+
         - npm run build
 
   artifacts:
@@ -28,5 +41,5 @@ frontend:
 
   cache:
     paths:
-      - "node_modules/**/*"
-      - ".next/cache/**/*"
+      - node_modules/**/*
+      - .next/cache/**/*
