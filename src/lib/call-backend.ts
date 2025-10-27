@@ -1,35 +1,30 @@
-// src/lib/call-backend.ts
-const BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "/api/backend").replace(/\/+$/, "");
+// Selalu kirim ke proxy Next.js bila path sudah diawali dengan /api/
+// Hanya pakai NEXT_PUBLIC_API_BASE_URL untuk path backend "langsung" (tanpa /api/)
+const RUNTIME_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/,"");
 
-type Opt = RequestInit & { json?: unknown };
+export function callBackend(path: string, init: RequestInit = {}) {
+  // Kalau sudah /api/... -> biarkan tetap relative ke origin (Next.js)
+  // Contoh: /api/backend/get_barang
+  const isNextApi = path.startsWith("/api/");
 
-export async function callBackend(path: string, opt: Opt = {}) {
-  const url =
-    path.startsWith("http") ? path :
-    path.startsWith("/api/backend") ? path :
-    `${BASE}${path.startsWith("/") ? path : `/${path}`}`;
+  const url = isNextApi
+    ? path
+    : `${RUNTIME_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
 
-  const headers = new Headers(opt.headers || {});
-  // Jika akan mengirim body, pastikan JSON
-  const willSendBody = opt.body != null || opt.json != null;
-  if (willSendBody && !headers.has("content-type")) {
+  const headers = new Headers(init.headers || {});
+  // Set Content-Type JSON jika ada body tapi belum ada headernya
+  if (!headers.has("content-type") && init.body) {
     headers.set("content-type", "application/json");
   }
 
-  const body = opt.json != null
-    ? JSON.stringify(opt.json)
-    : (opt.body as BodyInit | null | undefined);
-
-  const res = await fetch(url, {
-    ...opt,
+  // Jangan cache (biar data live)
+  const opts: RequestInit = {
+    ...init,
     headers,
-    body,
-    method: opt.method ?? (willSendBody ? "POST" : "GET"),
-    // penting: kirim cookie NextAuth untuk lewati middleware
-    credentials: "same-origin",
-    // hindari stale cache di browser
     cache: "no-store",
-  });
+    // Kirim kredensial (cookie NextAuth) ke origin yang sama (safe)
+    credentials: "same-origin",
+  };
 
-  return res;
+  return fetch(url, opts);
 }
