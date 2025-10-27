@@ -25,7 +25,7 @@ export default function HistoryPage() {
     setLoading(true);
     setErr(null);
     try {
-      const r = await callBackend("/api/backend/get_history");
+      const r = await callBackend("/get_history");
       if (!r.ok) throw new Error(`Backend ${r.status}`);
       setData(await r.json());
     } catch (e: any) {
@@ -36,7 +36,7 @@ export default function HistoryPage() {
   }
 
   async function hapusSemua() {
-    await callBackend("/api/backend/delete_history", { method: "DELETE" });
+    await callBackend("/delete_history", { method: "DELETE" });
     await load();
   }
 

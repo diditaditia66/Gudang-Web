@@ -35,7 +35,7 @@ export default function ListPage() {
     setLoading(true);
     setMsg(null);
     try {
-      const r = await callBackend("/api/backend/get_barang");
+      const r = await callBackend("/get_barang");
       if (!r.ok) throw new Error("Gagal memuat data");
       const data: Row[] = await r.json();
       setRows(data);
@@ -93,7 +93,7 @@ export default function ListPage() {
   async function remove(nama: string, lokasi: string) {
     setMsg(null);
     try {
-      const r = await callBackend("/api/backend/delete_barang", {
+      const r = await callBackend("/delete_barang", {
         method: "DELETE",
         body: JSON.stringify({ nama_barang: nama, lokasi }),
       });

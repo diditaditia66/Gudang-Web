@@ -49,8 +49,8 @@ export default function AmbilPage() {
     setMsgError(null);
     try {
       const [rb, rh] = await Promise.all([
-        callBackend("/api/backend/get_barang"),
-        callBackend("/api/backend/get_history"),
+        callBackend("/get_barang"),
+        callBackend("/get_history"),
       ]);
       setAll(rb.ok ? await rb.json() : []);
       setHistory(rh.ok ? await rh.json() : []);
@@ -89,7 +89,7 @@ export default function AmbilPage() {
     setMsgError(null);
     setMsgOk(null);
     try {
-      const res = await callBackend("/api/backend/ambil_barang", {
+      const res = await callBackend("/ambil_barang", {
         method: "POST",
         body: JSON.stringify({
           nama_barang: nama,
@@ -287,7 +287,7 @@ export default function AmbilPage() {
                 <Button
                   variant="danger"
                   onClick={async () => {
-                    await callBackend("/api/backend/delete_history", { method: "DELETE", body: JSON.stringify({}) });
+                    await callBackend("/delete_history", { method: "DELETE", body: JSON.stringify({}) });
                     setConfirmAll(false);
                     await reloadAll();
                   }}

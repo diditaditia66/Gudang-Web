@@ -46,7 +46,7 @@ export default function TambahBarangPage() {
         username,
       };
 
-      const r = await callBackend("/api/backend/add_barang", {
+      const r = await callBackend("/add_barang", {
         method: "POST",
         body: JSON.stringify(body),
       });
