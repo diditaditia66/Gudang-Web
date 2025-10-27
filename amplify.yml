@@ -3,20 +3,14 @@ frontend:
   phases:
     preBuild:
       commands:
-        - "if ! npm ls typescript >/dev/null 2>&1; then npm install --save-dev typescript @types/react @types/node; fi"
-        - "npm ci --include=dev"
-        - echo "Node version:"
-        - node -v
-        - nvm install 20
-        - nvm use 20
-        - echo "Current node:"
-        - node -v
-        - echo "Current npm:"
-        - npm -v
-        - echo "Cleaning up..."
+        - echo "🔧 Menginstal TypeScript dan definisi types..."
+        - npm install --save-dev typescript @types/react @types/node
+
+        - echo "🧹 Membersihkan cache..."
         - rm -rf node_modules .next
-        - npm ci
-        - echo "✅ Dependencies installed successfully"
+        - npm ci --include=dev
+
+        - echo "✅ Dependencies siap."
 
     build:
       commands:
@@ -24,7 +18,6 @@ frontend:
         - export NEXT_TELEMETRY_DISABLED=1
         - export NODE_OPTIONS="--max_old_space_size=4096"
         - echo "NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL" > .env.production
-        - echo ".env.production:"
         - cat .env.production
         - npm run build
 
@@ -35,5 +28,5 @@ frontend:
 
   cache:
     paths:
-      - node_modules/**/* 
-      - .next/cache/**/*
+      - "node_modules/**/*"
+      - ".next/cache/**/*"
