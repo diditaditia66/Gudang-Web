@@ -4,19 +4,22 @@ frontend:
   phases:
     preBuild:
       commands:
+        # --- Pakai Node 20 di environment build
         - echo "Node before nvm:" && node -v || true
         - if [ -f "$HOME/.nvm/nvm.sh" ]; then . "$HOME/.nvm/nvm.sh"; fi
         - if command -v nvm >/dev/null 2>&1; then nvm install 20 && nvm use 20; fi
-        - echo "Using Node:" && node -v
-        - rm -rf node_modules .next
-        - npm ci --no-audit --no-fund
+        - echo "Using Node:" && node -v && echo "npm:" && npm -v
+
+        # --- Install deps (termasuk devDeps untuk TypeScript)
+        - rm -rf node_modules .next .next/cache
+        - npm ci --include=dev --no-audit --no-fund
 
     build:
       commands:
         - export NEXT_TELEMETRY_DISABLED=1
         - export NODE_OPTIONS="--max_old_space_size=4096"
 
-        # Tulis env ke .env.production (JANGAN echo ke log)
+        # --- Tulis env runtime ke .env.production (server & client)
         - echo "Menulis .env.production untuk runtime SSR..."
         - rm -f .env.production
         - printf "NEXTAUTH_URL=%s\n" "$NEXTAUTH_URL" >> .env.production
@@ -29,9 +32,10 @@ frontend:
         - printf "NEXT_PUBLIC_API_BASE_URL=%s\n" "$NEXT_PUBLIC_API_BASE_URL" >> .env.production
         - printf "NEXT_PUBLIC_AWS_REGION=%s\n" "$NEXT_PUBLIC_AWS_REGION" >> .env.production
 
-        # Tampilkan hanya key agar tahu file terbuat (tanpa nilai)
+        # tampilkan hanya KEY agar aman (tanpa nilai)
         - echo "Keys in .env.production:" && awk -F= '{print $1}' .env.production
 
+        # --- Build Next.js
         - npm run build
 
   artifacts:
