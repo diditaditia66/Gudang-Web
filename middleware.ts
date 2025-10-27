@@ -1,15 +1,13 @@
 // middleware.ts
-export { auth as middleware } from "@/lib/auth";
-
-// Tentukan route yang WAJIB login (sisanya publik).
+export { auth as middleware } from "@/auth";
 export const config = {
   matcher: [
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|assets/).*)',
-    '/home',
-    '/ambil',
-    '/list',
-    '/history',
-    '/barang/:path*',
-    '/api/backend/:path*', // proteksi proxy ke backend juga
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|assets/).*)",
+    "/home",
+    "/ambil",
+    "/list",
+    "/history",
+    "/barang/:path*",
+    "/api/backend/:path*", // tetap proteksi
   ],
 };

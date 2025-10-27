@@ -1,17 +1,19 @@
-// src/app/api/backend/[...path]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { auth } from "@/auth";
 
-const BASE = process.env.BACKEND_BASE!; // pastikan env ini diset di Amplify
+export const runtime = "nodejs";
+
+const BASE = process.env.BACKEND_BASE!;
 
 async function proxy(req: NextRequest, params: { path: string[] }) {
-  // Ambil session via NextAuth v5
+  // Masih wajib login pakai NextAuth
   const session = await auth();
+  if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
   const urlPath = "/" + (params.path?.join("/") ?? "");
-  const targetUrl = BASE + urlPath + (req.nextUrl.search || "");
+  const targetUrl = BASE.replace(/\/+$/, "") + urlPath + (req.nextUrl.search || "");
 
-  // Teruskan header dari request asal (tanpa header berbahaya)
+  // Header tanpa Authorization
   const headers = new Headers();
   req.headers.forEach((v, k) => {
     const lk = k.toLowerCase();
@@ -19,7 +21,7 @@ async function proxy(req: NextRequest, params: { path: string[] }) {
     headers.set(k, v);
   });
 
-  // Sisipkan identitas user ke backend (opsional)
+  // Kirim identitas user untuk audit/log
   if (session?.user?.email || session?.user?.name) {
     headers.set("x-user-email", String(session.user?.email ?? session.user?.name));
   }
@@ -35,24 +37,27 @@ async function proxy(req: NextRequest, params: { path: string[] }) {
     redirect: "manual",
   });
 
-  const outHeaders = new Headers();
-  resp.headers.forEach((v, k) => outHeaders.set(k, v));
+  const out = new Headers();
+  resp.headers.forEach((v, k) => out.set(k, v));
 
-  return new NextResponse(resp.body, { status: resp.status, headers: outHeaders });
+  return new NextResponse(resp.body, {
+    status: resp.status,
+    headers: out,
+  });
 }
 
-export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {
-  return proxy(req, params);
+export async function GET(req: NextRequest, ctx: { params: { path: string[] } }) {
+  return proxy(req, ctx.params);
 }
-export async function POST(req: NextRequest, { params }: { params: { path: string[] } }) {
-  return proxy(req, params);
+export async function POST(req: NextRequest, ctx: { params: { path: string[] } }) {
+  return proxy(req, ctx.params);
 }
-export async function PUT(req: NextRequest, { params }: { params: { path: string[] } }) {
-  return proxy(req, params);
+export async function PUT(req: NextRequest, ctx: { params: { path: string[] } }) {
+  return proxy(req, ctx.params);
 }
-export async function PATCH(req: NextRequest, { params }: { params: { path: string[] } }) {
-  return proxy(req, params);
+export async function PATCH(req: NextRequest, ctx: { params: { path: string[] } }) {
+  return proxy(req, ctx.params);
 }
-export async function DELETE(req: NextRequest, { params }: { params: { path: string[] } }) {
-  return proxy(req, params);
+export async function DELETE(req: NextRequest, ctx: { params: { path: string[] } }) {
+  return proxy(req, ctx.params);
 }
