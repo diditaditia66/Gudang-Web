@@ -19,6 +19,13 @@ frontend:
         - export NEXT_TELEMETRY_DISABLED=1
         - export NODE_OPTIONS="--max_old_space_size=4096"
 
+        # --- Validasi env wajib (tanpa print nilai)
+        - >
+          for k in NEXTAUTH_URL NEXTAUTH_SECRET COGNITO_CLIENT_ID COGNITO_CLIENT_SECRET
+          COGNITO_ISSUER BACKEND_BASE NEXT_PUBLIC_API_BASE_URL AUTH_TRUST_HOST; do
+            if [ -z "${!k}" ]; then echo "ERROR: Missing env $k"; exit 1; else echo "OK: $k"; fi;
+          done
+
         # --- Tulis env runtime ke .env.production (server & client)
         - echo "Menulis .env.production untuk runtime SSR..."
         - rm -f .env.production
@@ -31,6 +38,7 @@ frontend:
         - printf "BACKEND_BEARER=%s\n" "$BACKEND_BEARER" >> .env.production
         - printf "NEXT_PUBLIC_API_BASE_URL=%s\n" "$NEXT_PUBLIC_API_BASE_URL" >> .env.production
         - printf "NEXT_PUBLIC_AWS_REGION=%s\n" "$NEXT_PUBLIC_AWS_REGION" >> .env.production
+        - printf "AUTH_TRUST_HOST=%s\n" "$AUTH_TRUST_HOST" >> .env.production
 
         # tampilkan hanya KEY agar aman (tanpa nilai)
         - echo "Keys in .env.production:" && awk -F= '{print $1}' .env.production
