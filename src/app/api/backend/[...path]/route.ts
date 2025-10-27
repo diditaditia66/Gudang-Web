@@ -7,16 +7,6 @@ export const dynamic = "force-dynamic";
 
 const BASE = (process.env.BACKEND_BASE || "").replace(/\/+$/, "");
 
-function ensureBase() {
-  if (!BASE) {
-    return NextResponse.json(
-      { message: "BACKEND_BASE is not set" },
-      { status: 500 }
-    );
-  }
-  return null;
-}
-
 const HOP_BY_HOP = new Set([
   "connection",
   "keep-alive",
@@ -28,39 +18,52 @@ const HOP_BY_HOP = new Set([
   "upgrade",
   "host",
   "content-length",
+  // NOTE: jangan kirim cookie ke backend eksternal
   "cookie",
 ]);
 
 async function proxy(req: NextRequest, params: { path: string[] }) {
-  const baseError = ensureBase();
-  if (baseError) return baseError;
+  if (!BASE) {
+    return NextResponse.json({ message: "BACKEND_BASE is not set" }, { status: 500 });
+  }
 
-  const session = await auth().catch(() => null); // opsional, jangan gagalkan bila auth error
+  // ambil sesi kalau ada (jangan fail kalau error)
+  const session = await auth().catch(() => null);
 
-  // Build target URL
-  const urlPath = "/" + (params.path?.join("/") ?? "");
-  const search = req.nextUrl.search || "";
-  const targetUrl = BASE + urlPath + search;
+  // build target URL
+  const path = "/" + (params.path?.join("/") ?? "");
+  const targetUrl = BASE + path + (req.nextUrl.search || "");
 
-  // Copy headers (minus hop-by-hop + cookie)
+  // copy headers (minus hop-by-hop)
   const headers = new Headers();
   req.headers.forEach((v, k) => {
     if (!HOP_BY_HOP.has(k.toLowerCase())) headers.set(k, v);
   });
 
-  // Tambahkan identitas (jika ada)
-  const who =
-    (session?.user?.email as string) ||
-    (session?.user?.name as string) ||
-    undefined;
+  // tambahkan identitas jika ada
+  const who = (session?.user?.email as string) || (session?.user?.name as string) || undefined;
   if (who) headers.set("x-user-email", who);
 
-  // Method & body
+  // normalisasi method & body
   const method = req.method.toUpperCase();
   const hasBody = !["GET", "HEAD"].includes(method);
-  const body = hasBody ? await req.arrayBuffer() : undefined;
+  let body: ArrayBuffer | undefined = undefined;
 
-  // Forward request
+  if (hasBody) {
+    body = await req.arrayBuffer();
+
+    // pastikan Content-Type ada saat body dipakai
+    if (!headers.has("content-type")) {
+      headers.set("content-type", "application/json");
+    }
+  }
+
+  // beberapa platform/edge suka melucuti body di DELETE
+  // trik: kalau DELETE + ada body, set method override
+  if (method === "DELETE" && body && !headers.has("x-http-method-override")) {
+    headers.set("x-http-method-override", "DELETE");
+  }
+
   const resp = await fetch(targetUrl, {
     method,
     headers,
@@ -69,7 +72,7 @@ async function proxy(req: NextRequest, params: { path: string[] }) {
     cache: "no-store",
   });
 
-  // Salin response headers (hindari set-cookie)
+  // salin response headers (tanpa set-cookie)
   const out = new Headers();
   resp.headers.forEach((v, k) => {
     if (k.toLowerCase() !== "set-cookie") out.set(k, v);
@@ -78,19 +81,16 @@ async function proxy(req: NextRequest, params: { path: string[] }) {
   return new NextResponse(resp.body, { status: resp.status, headers: out });
 }
 
-// OPTIONS (preflight) – langsung teruskan ke backend, atau balas 204 jika BASE kosong
-export async function OPTIONS(req: NextRequest, ctx: { params: { path: string[] } }) {
-  if (!BASE) {
-    return new NextResponse(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-        "Access-Control-Allow-Headers": "*",
-      },
-    });
-  }
-  return proxy(req, ctx.params);
+// preflight
+export async function OPTIONS(_req: NextRequest) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+      "Access-Control-Allow-Headers": "*",
+    },
+  });
 }
 
 export async function GET(req: NextRequest, ctx: { params: { path: string[] } }) {
