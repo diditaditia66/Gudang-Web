@@ -1,3 +1,4 @@
+// src/app/ambil/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -48,6 +49,7 @@ export default function AmbilPage() {
     setLoading(true);
     setMsgError(null);
     try {
+      // ✅ arahkan ke proxy app: /api/backend/*
       const [rb, rh] = await Promise.all([
         callBackend("/api/backend/get_barang"),
         callBackend("/api/backend/get_history"),
@@ -107,7 +109,7 @@ export default function AmbilPage() {
       setLokasi("");
       await reloadAll();
     } catch (err: any) {
-      setMsgError(err.message);
+      setMsgError(err.message || "Kesalahan jaringan/server");
     } finally {
       setBusy(false);
     }
@@ -287,7 +289,11 @@ export default function AmbilPage() {
                 <Button
                   variant="danger"
                   onClick={async () => {
-                    await callBackend("/api/backend/delete_history", { method: "POST", body: JSON.stringify({}) }); // DELETE -> POST
+                    // ⚠️ Backend menerima POST untuk hapus semua
+                    await callBackend("/api/backend/delete_history", {
+                      method: "POST",
+                      body: JSON.stringify({}),
+                    });
                     setConfirmAll(false);
                     await reloadAll();
                   }}

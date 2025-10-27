@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const BASE = (process.env.BACKEND_BASE || "").replace(/\/+$/, "");
+const BASE = process.env.BACKEND_BASE?.replace(/\/+$/, "") || "https://api.cartenz-vpn.my.id";
 
 const HOP_BY_HOP = new Set([
   "connection",
@@ -18,49 +18,33 @@ const HOP_BY_HOP = new Set([
   "upgrade",
   "host",
   "content-length",
-  // NOTE: jangan kirim cookie ke backend eksternal
-  "cookie",
+  "cookie", // jangan teruskan cookie ke backend eksternal
 ]);
 
 async function proxy(req: NextRequest, params: { path: string[] }) {
-  if (!BASE) {
-    return NextResponse.json({ message: "BACKEND_BASE is not set" }, { status: 500 });
-  }
-
-  // ambil sesi kalau ada (jangan fail kalau error)
-  const session = await auth().catch(() => null);
-
-  // build target URL
   const path = "/" + (params.path?.join("/") ?? "");
   const targetUrl = BASE + path + (req.nextUrl.search || "");
 
-  // copy headers (minus hop-by-hop)
+  const session = await auth().catch(() => null);
+
   const headers = new Headers();
   req.headers.forEach((v, k) => {
     if (!HOP_BY_HOP.has(k.toLowerCase())) headers.set(k, v);
   });
 
-  // tambahkan identitas jika ada
   const who = (session?.user?.email as string) || (session?.user?.name as string) || undefined;
   if (who) headers.set("x-user-email", who);
 
-  // normalisasi method & body
   const method = req.method.toUpperCase();
   const hasBody = !["GET", "HEAD"].includes(method);
-  let body: ArrayBuffer | undefined = undefined;
+  const body = hasBody ? await req.arrayBuffer() : undefined;
 
-  if (hasBody) {
-    body = await req.arrayBuffer();
-
-    // pastikan Content-Type ada saat body dipakai
-    if (!headers.has("content-type")) {
-      headers.set("content-type", "application/json");
-    }
+  if (hasBody && !headers.has("content-type")) {
+    headers.set("content-type", "application/json");
   }
 
-  // beberapa platform/edge suka melucuti body di DELETE
-  // trik: kalau DELETE + ada body, set method override
-  if (method === "DELETE" && body && !headers.has("x-http-method-override")) {
+  // Bypass masalah DELETE body di fetch
+  if (method === "DELETE" && body) {
     headers.set("x-http-method-override", "DELETE");
   }
 
@@ -72,7 +56,6 @@ async function proxy(req: NextRequest, params: { path: string[] }) {
     cache: "no-store",
   });
 
-  // salin response headers (tanpa set-cookie)
   const out = new Headers();
   resp.headers.forEach((v, k) => {
     if (k.toLowerCase() !== "set-cookie") out.set(k, v);
@@ -81,8 +64,7 @@ async function proxy(req: NextRequest, params: { path: string[] }) {
   return new NextResponse(resp.body, { status: resp.status, headers: out });
 }
 
-// preflight
-export async function OPTIONS(_req: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
     headers: {

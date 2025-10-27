@@ -36,7 +36,7 @@ export default function HistoryPage() {
   }
 
   async function hapusSemua() {
-    await callBackend("/api/backend/delete_history", { method: "POST" }); // ganti DELETE -> POST
+    await callBackend("/api/backend/delete_history", { method: "POST" });
     await load();
   }
 
