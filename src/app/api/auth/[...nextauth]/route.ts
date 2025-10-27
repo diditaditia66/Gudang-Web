@@ -1,2 +1,3 @@
-// NextAuth v5 — App Router
-export { handlers as GET, handlers as POST } from "@/auth";
+// NextAuth v5 — benar
+import { handlers } from "@/auth";
+export const { GET, POST } = handlers;
