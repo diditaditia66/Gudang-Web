@@ -1,32 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { getCurrentUser } from "aws-amplify/auth";
+import { ReactNode, useEffect } from "react";
+import { useSession, signIn } from "next-auth/react";
+import { usePathname } from "next/navigation";
 
-/** Membatasi akses ke children jika belum login (redirect ke /login?next=...) */
-export default function RequireAuth({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
+export default function RequireAuth({ children }: { children: ReactNode }) {
+  const { status } = useSession();
   const pathname = usePathname();
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
-    getCurrentUser()
-      .then(() => mounted && setReady(true))
-      .catch(() => router.replace(`/login?next=${encodeURIComponent(pathname)}`));
-    return () => {
-      mounted = false;
-    };
-  }, [router, pathname]);
+    if (status === "unauthenticated") {
+      // Kembali ke halaman ini setelah login
+      signIn("cognito", { callbackUrl: pathname || "/home" });
+    }
+  }, [status, pathname]);
 
-  if (!ready) {
+  if (status !== "authenticated") {
     return (
-      <div className="min-h-[50vh] grid place-items-center text-gray-600">
-        Memuat…
+      <div className="min-h-[50vh] grid place-items-center text-gray-500">
+        Memuat sesi...
       </div>
     );
   }
-
   return <>{children}</>;
 }

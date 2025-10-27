@@ -1,26 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import RequireAuth from "@/components/RequireAuth";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { Card, CardBody, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/Card";
-import { getUserEmail } from "@/lib/auth-client";
 import { callBackend } from "@/lib/call-backend";
+import { useSession } from "next-auth/react";
 
 export default function TambahBarangPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const username =
+    (session?.user?.email as string) || (session?.user?.name as string) || "web";
+
   const [namaBarang, setNamaBarang] = useState("");
   const [jumlah, setJumlah] = useState<number | "">("");
   const [lokasi, setLokasi] = useState("");
-  const [username, setUsername] = useState("");
   const [msg, setMsg] = useState<string>("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    getUserEmail().then((e) => setUsername(e ?? "web"));
-  }, []);
 
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -44,7 +43,7 @@ export default function TambahBarangPage() {
         jumlah: Number(jumlah),
         lokasi: lokasi.trim(),
         aksi: "Tambah Barang",
-        username: username || "web",
+        username,
       };
 
       const r = await callBackend("/api/backend/add_barang", {
@@ -100,12 +99,8 @@ export default function TambahBarangPage() {
                       error={errors.jumlah}
                       className="flex-1"
                     />
-                    <Button type="button" variant="ghost" onClick={() => setJumlah((prev) => (prev === "" ? 1 : Math.max(1, Number(prev) - 1)))}>
-                      −
-                    </Button>
-                    <Button type="button" variant="ghost" onClick={() => setJumlah((prev) => (prev === "" ? 1 : Number(prev) + 1))}>
-                      +
-                    </Button>
+                    <Button type="button" variant="ghost" onClick={() => setJumlah((prev) => (prev === "" ? 1 : Math.max(1, Number(prev) - 1)))}>−</Button>
+                    <Button type="button" variant="ghost" onClick={() => setJumlah((prev) => (prev === "" ? 1 : Number(prev) + 1))}>+</Button>
                   </div>
                   {errors.jumlah && <p className="text-xs text-red-600 mt-1">{errors.jumlah}</p>}
                 </div>
@@ -120,7 +115,7 @@ export default function TambahBarangPage() {
 
                 <CardFooter className="!p-0 pt-2 flex items-center justify-between">
                   <span className="text-xs text-gray-500">
-                    Disimpan sebagai: <b>{username || "web"}</b>
+                    Disimpan sebagai: <b>{username}</b>
                   </span>
                   <Button type="submit" variant="primary" loading={loading} disabled={!canSubmit || loading}>
                     Simpan

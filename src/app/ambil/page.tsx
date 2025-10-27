@@ -6,8 +6,8 @@ import Button from "@/components/ui/Button";
 import Autocomplete from "@/components/ui/Autocomplete";
 import Input from "@/components/ui/Input";
 import { Card, CardBody } from "@/components/ui/Card";
-import { getUserEmail } from "@/lib/auth-client";
 import { callBackend } from "@/lib/call-backend";
+import { useSession } from "next-auth/react";
 
 type Barang = { nama_barang: string; jumlah: number; lokasi: string };
 type History = {
@@ -21,7 +21,9 @@ type History = {
 };
 
 export default function AmbilPage() {
+  const { data: session } = useSession();
   const [username, setUsername] = useState<string>("");
+
   const [nama, setNama] = useState("");
   const [jumlah, setJumlah] = useState<number | "">("");
   const [lokasi, setLokasi] = useState("");
@@ -34,7 +36,11 @@ export default function AmbilPage() {
   const [confirmAll, setConfirmAll] = useState(false);
 
   useEffect(() => {
-    getUserEmail().then((e) => setUsername(e ?? ""));
+    const email = (session?.user?.email as string) || (session?.user?.name as string) || "";
+    setUsername(email);
+  }, [session]);
+
+  useEffect(() => {
     void reloadAll();
   }, []);
 
@@ -110,7 +116,7 @@ export default function AmbilPage() {
   const ambilOnlyHistory = useMemo(
     () =>
       history
-        .filter((h) => /ambil/i.test(h.aksi || ""))
+        .filter((h) => /ambil/i.test(h.aksi || "")) // hanya riwayat ambil
         .sort((a, b) => +new Date(b.waktu) - +new Date(a.waktu)),
     [history]
   );
@@ -141,7 +147,6 @@ export default function AmbilPage() {
               }}
               className="grid gap-4 md:grid-cols-4"
             >
-              {/* NAMA + AUTOCOMPLETE */}
               <div className="md:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-gray-700">Nama Barang</label>
                 <Autocomplete
@@ -162,7 +167,6 @@ export default function AmbilPage() {
                 )}
               </div>
 
-              {/* JUMLAH */}
               <Input
                 label="Jumlah"
                 type="number"
@@ -172,7 +176,6 @@ export default function AmbilPage() {
                 onChange={(e) => setJumlah(e.target.value === "" ? "" : Number(e.target.value))}
               />
 
-              {/* LOKASI */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">Lokasi</label>
                 {lokasiList.length ? (

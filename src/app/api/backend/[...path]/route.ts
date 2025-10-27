@@ -1,74 +1,50 @@
 // src/app/api/backend/[...path]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getServerEnv } from "@/lib/server-env";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
+const BASE = process.env.BACKEND_BASE!;
 
-async function withRetry<T>(fn: () => Promise<T>, times = 2, delayMs = 400): Promise<T> {
-  let lastErr: unknown;
-  for (let i = 0; i <= times; i++) {
-    try { return await fn(); } catch (err) {
-      lastErr = err; if (i === times) break;
-      await new Promise(r => setTimeout(r, delayMs * (i + 1)));
-    }
-  }
-  throw lastErr;
-}
+async function proxy(req: NextRequest, params: { path: string[] }) {
+  const session = await getServerSession(authOptions);
 
-async function handle(req: NextRequest, { params }: { params: { path: string[] } }) {
-  let BACKEND_BASE: string, BACKEND_BEARER: string;
-  try {
-    ({ BACKEND_BASE, BACKEND_BEARER } = getServerEnv());
-  } catch (e: any) {
-    return NextResponse.json({ message: e?.message || "Server env missing" }, { status: 401 });
-  }
-
-  const path = params.path.join("/");
-  const url = new URL(req.url);
-  const dest = `${BACKEND_BASE.replace(/\/+$/, "")}/${path}${url.search || ""}`;
+  const urlPath = "/" + (params.path?.join("/") ?? "");
+  const targetUrl = BASE + urlPath + (req.nextUrl.search || "");
 
   const headers = new Headers();
   req.headers.forEach((v, k) => {
-    const key = k.toLowerCase();
-    if (key === "host" || key === "content-length" || key === "connection") return;
+    const lk = k.toLowerCase();
+    if (["host", "connection", "content-length", "cookie"].includes(lk)) return;
     headers.set(k, v);
   });
 
-  // pakai service bearer
-  headers.set("authorization", `Bearer ${BACKEND_BEARER}`);
-  if (!headers.has("content-type") && req.method !== "GET" && req.method !== "HEAD") {
-    headers.set("content-type", "application/json");
+  if (session?.user?.email || session?.user?.name) {
+    headers.set("x-user-email", String(session.user?.email ?? session.user?.name));
   }
-  headers.set("x-forwarded-proto", "https");
-  headers.set("user-agent", "Next.js Server (Proxy)");
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-  const init: RequestInit = {
-    method: req.method,
-    headers,
-    signal: controller.signal,
-    cache: "no-store",
-    body: req.method !== "GET" && req.method !== "HEAD" ? await req.text() : undefined,
-  };
+  const method = req.method.toUpperCase();
+  const hasBody = !["GET", "HEAD"].includes(method);
+  const body = hasBody ? await req.arrayBuffer() : undefined;
 
-  try {
-    const r = await withRetry(() => fetch(dest, init));
-    clearTimeout(timeout);
+  const resp = await fetch(targetUrl, { method, headers, body, redirect: "manual" });
 
-    const buf = await r.arrayBuffer();
-    const out = new NextResponse(buf, { status: r.status });
-    r.headers.forEach((v, k) => out.headers.set(k, v));
-    return out;
-  } catch (err: any) {
-    const msg = typeof err?.message === "string" ? err.message : String(err);
-    return NextResponse.json({ error: "Proxy failed", detail: msg }, { status: 500 });
-  }
+  const outHeaders = new Headers();
+  resp.headers.forEach((v, k) => outHeaders.set(k, v));
+  return new NextResponse(resp.body, { status: resp.status, headers: outHeaders });
 }
 
-export const GET = (req: NextRequest, ctx: any) => handle(req, ctx);
-export const POST = (req: NextRequest, ctx: any) => handle(req, ctx);
-export const PUT = (req: NextRequest, ctx: any) => handle(req, ctx);
-export const PATCH = (req: NextRequest, ctx: any) => handle(req, ctx);
-export const DELETE = (req: NextRequest, ctx: any) => handle(req, ctx);
+export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return proxy(req, params);
+}
+export async function POST(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return proxy(req, params);
+}
+export async function PUT(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return proxy(req, params);
+}
+export async function PATCH(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return proxy(req, params);
+}
+export async function DELETE(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return proxy(req, params);
+}

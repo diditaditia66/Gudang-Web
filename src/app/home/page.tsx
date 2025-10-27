@@ -1,16 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import RequireAuth from "@/components/RequireAuth";
-import { getUserEmail } from "@/lib/auth-client";
+import { useSession } from "next-auth/react";
 import { Plus, PackageOpen, FileText } from "lucide-react";
 
 export default function HomePage() {
-  const [email, setEmail] = useState<string | null>(null);
-  useEffect(() => {
-    getUserEmail().then(setEmail);
-  }, []);
+  const { data: session } = useSession();
+  const email =
+    (session?.user?.email as string) || (session?.user?.name as string) || null;
 
   return (
     <RequireAuth>
