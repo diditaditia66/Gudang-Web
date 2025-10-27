@@ -1,16 +1,17 @@
 // src/app/api/backend/[...path]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 
-const BASE = process.env.BACKEND_BASE!;
+const BASE = process.env.BACKEND_BASE!; // pastikan env ini diset di Amplify
 
 async function proxy(req: NextRequest, params: { path: string[] }) {
-  const session = await getServerSession(authOptions);
+  // Ambil session via NextAuth v5
+  const session = await auth();
 
   const urlPath = "/" + (params.path?.join("/") ?? "");
   const targetUrl = BASE + urlPath + (req.nextUrl.search || "");
 
+  // Teruskan header dari request asal (tanpa header berbahaya)
   const headers = new Headers();
   req.headers.forEach((v, k) => {
     const lk = k.toLowerCase();
@@ -18,6 +19,7 @@ async function proxy(req: NextRequest, params: { path: string[] }) {
     headers.set(k, v);
   });
 
+  // Sisipkan identitas user ke backend (opsional)
   if (session?.user?.email || session?.user?.name) {
     headers.set("x-user-email", String(session.user?.email ?? session.user?.name));
   }
@@ -26,10 +28,16 @@ async function proxy(req: NextRequest, params: { path: string[] }) {
   const hasBody = !["GET", "HEAD"].includes(method);
   const body = hasBody ? await req.arrayBuffer() : undefined;
 
-  const resp = await fetch(targetUrl, { method, headers, body, redirect: "manual" });
+  const resp = await fetch(targetUrl, {
+    method,
+    headers,
+    body,
+    redirect: "manual",
+  });
 
   const outHeaders = new Headers();
   resp.headers.forEach((v, k) => outHeaders.set(k, v));
+
   return new NextResponse(resp.body, { status: resp.status, headers: outHeaders });
 }
 

@@ -68,7 +68,7 @@ function HeaderBar() {
           </div>
         ) : (
           <button
-            onClick={() => signIn("cognito")}
+            onClick={() => signIn("cognito", { callbackUrl: "/home" })}
             className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition text-sm font-medium"
           >
             Login
