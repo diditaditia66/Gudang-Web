@@ -3,31 +3,28 @@ frontend:
   phases:
     preBuild:
       commands:
-        - "if command -v node >/dev/null 2>&1; then echo 'Node exists:' $(node -v); else echo 'Bootstrapping nvm...'; fi"
-        - ". ~/.nvm/nvm.sh || true"
-        - "if command -v nvm >/dev/null 2>&1; then nvm install 20 && nvm use 20; fi"
-        - "echo 'RUN: PWD='$(pwd)'  Node='$(node -v)'  npm='$(npm -v)'"
-
-        - "test -f package-lock.json || (echo 'ERROR: package-lock.json missing' && exit 1)"
-        - "rm -rf node_modules .next .next/cache"
-        - "npm ci --include=dev"
-
-        # Cek Tailwind TERPASANG
-        - "npm ls tailwindcss || true"
-        - "node -e \"require('tailwindcss'); console.log('tailwind ok')\""
-
-        # Verifikasi alias @ di tsconfig.json
-        - "test -f tsconfig.json || (echo 'ERROR: tsconfig.json tidak ditemukan di root' && exit 1)"
-        - "node -e \"const f=require('./tsconfig.json'); const ok=f?.compilerOptions?.paths?.['@/*']; if(!ok){console.error('ERROR: Alias @ belum dikonfigurasi di tsconfig.json'); process.exit(1)} console.log('Alias @ OK ->', ok)\""
+        - echo "Node version:"
+        - node -v
+        - nvm install 20
+        - nvm use 20
+        - echo "Current node:"
+        - node -v
+        - echo "Current npm:"
+        - npm -v
+        - echo "Cleaning up..."
+        - rm -rf node_modules .next
+        - npm ci
+        - echo "✅ Dependencies installed successfully"
 
     build:
       commands:
-        - "export NEXT_TELEMETRY_DISABLED=1"
-        - "export NODE_OPTIONS='--max_old_space_size=4096'"
-        - "test -n \"$NEXT_PUBLIC_API_BASE_URL\" || (echo 'ERROR: NEXT_PUBLIC_API_BASE_URL belum di-set di Amplify Environment variables' && exit 1)"
-        - "echo \"NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL\" > .env.production"
-        - "echo '.env.production:' && cat .env.production"
-        - "npm run build"
+        - echo "🚀 Building Next.js project..."
+        - export NEXT_TELEMETRY_DISABLED=1
+        - export NODE_OPTIONS="--max_old_space_size=4096"
+        - echo "NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL" > .env.production
+        - echo ".env.production:"
+        - cat .env.production
+        - npm run build
 
   artifacts:
     baseDirectory: .next
@@ -36,5 +33,5 @@ frontend:
 
   cache:
     paths:
-      - "node_modules/**/*"
-      - ".next/cache/**/*"
+      - node_modules/**/* 
+      - .next/cache/**/*
