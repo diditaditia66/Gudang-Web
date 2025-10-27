@@ -15,9 +15,7 @@ type SortDir = "asc" | "desc";
 export default function ListPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [q, setQ] = useState("");
-  const [confirm, setConfirm] = useState<{ open: boolean; nama?: string; lokasi?: string }>({
-    open: false,
-  });
+  const [confirm, setConfirm] = useState<{ open: boolean; nama?: string; lokasi?: string }>({ open: false });
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("nama_barang");
@@ -35,7 +33,7 @@ export default function ListPage() {
     setLoading(true);
     setMsg(null);
     try {
-      const r = await callBackend("/get_barang");
+      const r = await callBackend("/api/backend/get_barang");
       if (!r.ok) throw new Error("Gagal memuat data");
       const data: Row[] = await r.json();
       setRows(data);
@@ -93,8 +91,8 @@ export default function ListPage() {
   async function remove(nama: string, lokasi: string) {
     setMsg(null);
     try {
-      const r = await callBackend("/delete_barang", {
-        method: "DELETE",
+      const r = await callBackend("/api/backend/delete_barang", {
+        method: "POST", // ganti dari DELETE -> POST
         body: JSON.stringify({ nama_barang: nama, lokasi }),
       });
       if (!r.ok) {
