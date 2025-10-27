@@ -6,7 +6,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Cognito({
       clientId: process.env.COGNITO_CLIENT_ID!,
       clientSecret: process.env.COGNITO_CLIENT_SECRET!,
-      issuer: process.env.COGNITO_ISSUER!, // https://cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_JvUBwluoz
+      issuer: process.env.COGNITO_ISSUER!,
       authorization: { params: { scope: "openid email profile" } },
     }),
   ],
