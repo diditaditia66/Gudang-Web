@@ -1,5 +1,22 @@
+// src/lib/auth.ts
 import NextAuth from "next-auth";
 import Cognito from "next-auth/providers/cognito";
+
+function requireEnv(keys: string[]) {
+  const missing = keys.filter((k) => !process.env[k]);
+  if (missing.length) {
+    console.error("NEXTAUTH MISSING ENV:", missing);
+    throw new Error("Missing required env: " + missing.join(", "));
+  }
+}
+
+requireEnv([
+  "NEXTAUTH_SECRET",
+  "NEXTAUTH_URL",
+  "COGNITO_CLIENT_ID",
+  "COGNITO_CLIENT_SECRET",
+  "COGNITO_ISSUER",
+]);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -12,4 +29,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET!,
+  debug: true,
+  logger: {
+    error(error) {
+      console.error("NEXTAUTH ERROR:", error);
+    },
+    warn(message) {
+      console.warn("NEXTAUTH WARN:", message);
+    },
+    debug(message) {
+      console.log("NEXTAUTH DEBUG:", message);
+    },
+  },
 });

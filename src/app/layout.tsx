@@ -79,13 +79,20 @@ function HeaderBar() {
   );
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="id">
       <body className="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
-        <SessionProvider>
+        {/* ✅ SessionProvider membutuhkan children */}
+        <SessionProvider session={undefined}>
           <HeaderBar />
-          <main className="flex-grow container mx-auto px-4 py-6">{children}</main>
+          <main className="flex-grow container mx-auto px-4 py-6">
+            {children}
+          </main>
           <footer className="text-center py-4 text-xs text-gray-500 border-t bg-white">
             © {new Date().getFullYear()} Gudang App — Didit Aditia
           </footer>
